@@ -2,3 +2,9 @@ fastapi
 uvicorn
 supabase
 python-dotenv
+httpx
+numpy
+yfinance
+textblob
+nltk
+pydantic
