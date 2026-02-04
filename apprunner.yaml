@@ -1,0 +1,21 @@
+version: 1.0
+runtime: python311
+build:
+  commands:
+    build:
+      - cd backend
+      - pip3 install -r requirements.txt
+run:
+  runtime-version: 3.11
+  command: sh -c "cd backend && python3 -m uvicorn main:app --host 0.0.0.0 --port 8080"
+  network:
+    port: 8080
+  env:
+    - name: SUPABASE_URL
+      value: ""
+    - name: SUPABASE_KEY
+      value: ""
+    - name: FINNHUB_API_KEY
+      value: ""
+    - name: FRONTEND_URL
+      value: ""
