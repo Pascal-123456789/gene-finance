@@ -1,17 +1,18 @@
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for SSL
-RUN apt-get update && apt-get install -y libssl-dev gcc
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Pre-download NLTK data so it doesn't fail on AWS
-RUN python -m nltk.downloader punkt brown
-
+# Copy only backend files
 COPY . .
 
-# Run uvicorn on port 8080 (AWS App Runner default)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Install dependencies
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Download NLTK data
+RUN python3 -c "import nltk; nltk.download('punkt'); nltk.download('brown')"
+
+# Expose port
+EXPOSE 8080
+
+# Start the application
+CMD ["python3", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
