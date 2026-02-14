@@ -9,6 +9,19 @@ const MarketScanner = () => {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [sortBy, setSortBy] = useState('alert_score');
   const [lastScanned, setLastScanned] = useState(null);
+  const [watchlist, setWatchlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('foega_watchlist')) || [];
+    } catch { return []; }
+  });
+
+  const toggleWatch = (ticker) => {
+    const updated = watchlist.includes(ticker)
+      ? watchlist.filter(t => t !== ticker)
+      : [...watchlist, ticker];
+    setWatchlist(updated);
+    localStorage.setItem('foega_watchlist', JSON.stringify(updated));
+  };
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -194,6 +207,13 @@ const MarketScanner = () => {
                 <div className="signals-triggered">
                   {alert.signals_triggered || 0}/3 signals active
                 </div>
+
+                <button
+                  className={`watch-btn ${watchlist.includes(alert.ticker) ? 'watched' : ''}`}
+                  onClick={(e) => { e.stopPropagation(); toggleWatch(alert.ticker); }}
+                >
+                  {watchlist.includes(alert.ticker) ? 'Watching' : 'Watch'}
+                </button>
               </div>
             ))}
           </div>

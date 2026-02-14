@@ -421,6 +421,33 @@
   font-weight: bold;
 }
 
+/* Watch Button */
+.watch-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  font-size: 0.85em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.watch-btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.watch-btn.watched {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
 /* Footer */
 .dashboard-footer {
   text-align: center;
