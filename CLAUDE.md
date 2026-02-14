@@ -26,7 +26,7 @@ pip install -r requirements.txt
 python main.py     # Uvicorn server at http://localhost:8000
 ```
 
-Both servers must run simultaneously for full functionality. The frontend hardcodes the API base URL as `http://127.0.0.1:8000`.
+Both servers must run simultaneously for full functionality. The frontend reads the API base URL from `import.meta.env.VITE_API_URL` (falls back to `http://127.0.0.1:8000`). See `frontend/.env.example`.
 
 ## Required Environment Variables (backend/.env)
 - `SUPABASE_URL` / `SUPABASE_KEY` — Supabase project credentials
@@ -44,15 +44,14 @@ Key API endpoints:
 - `/alerts/cached` — Fast cached alerts from Supabase (used by frontend)
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
-- `/premium/walk_forward/{ticker}` — Mock walk-forward analysis
-- `/strategies/thematic` — Hardcoded sector groupings
+- `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
 - `/stock/{ticker}` — Single stock info via yfinance
 
 Caching: 5-minute in-memory TTL for expensive endpoints; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/thematic/modeler/premium), growth modeler, and ticker detail modal
-- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting and auto-refresh from `/alerts/cached`
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/premium), and ticker detail modal
+- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, and last-scanned timestamp
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
 
 State management is local React hooks only (useState/useEffect). No router library — views are toggled via state.
