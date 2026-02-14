@@ -112,10 +112,6 @@ async def scheduled_update_loop():
         # Wait for 1 hour (3600 seconds)
         await asyncio.sleep(3600)
         
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    # No pool to close, no action needed here.
-    pass
 
 # ---------------------------
 # HELPER FUNCTIONS (ASYNC DATA COLLECTION)
