@@ -274,8 +274,6 @@ async def trending_hype():
             continue # Continue to the next ticker
     
     successful_results = [r for r in raw_results if isinstance(r, dict) and "ticker" in r]
-
-    successful_results = [r for r in raw_results if isinstance(r, dict) and "ticker" in r]
     
     # --- Separate and Score Data ---
     stock_results = [r for r in successful_results if r["ticker"] in STOCK_TICKERS]
