@@ -596,10 +596,25 @@ async def scan_for_alerts():
             
             response = supabase.table('meme_alerts').upsert(records, on_conflict='ticker').execute()
             print(f"Saved {len(records)} unified alerts to database")
-            
+
         except Exception as e:
             print(f"Database save error: {e}")
-    
+
+        # Append to score_history (always insert, never upsert)
+        try:
+            history_records = [
+                {
+                    "ticker": item["ticker"],
+                    "early_warning_score": item["early_warning_score"],
+                    "alert_level": item["alert_level"],
+                }
+                for item in results
+            ]
+            supabase.table('score_history').insert(history_records).execute()
+            print(f"Appended {len(history_records)} records to score_history")
+        except Exception as e:
+            print(f"score_history insert error: {e}")
+
     return results
 
 @app.get("/alerts/cached")
@@ -640,6 +655,27 @@ async def get_alert_for_ticker(ticker: str):
     result = await detector.get_early_warning_score(ticker.upper())
     return result
     
+@app.get("/history/{ticker}")
+async def get_score_history(ticker: str):
+    """Returns last 7 days of score_history for a ticker."""
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    try:
+        seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+        response = (
+            supabase.table('score_history')
+            .select('*')
+            .eq('ticker', ticker.upper())
+            .gte('recorded_at', seven_days_ago)
+            .order('recorded_at')
+            .execute()
+        )
+        return response.data or []
+    except Exception as e:
+        print(f"score_history read error for {ticker}: {e}")
+        return {"error": str(e)}
+
 @app.on_event("shutdown")
 async def shutdown():
     """Cleanup on shutdown"""
