@@ -279,6 +279,10 @@
   background: linear-gradient(90deg, #4fc3f7 0%, #29b6f6 100%);
 }
 
+.signal-fill.social {
+  background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+}
+
 .signal-row .signal-value {
   min-width: 40px;
   text-align: right;
@@ -415,6 +419,33 @@
 .alert-level-low {
   color: #4caf50 !important;
   font-weight: bold;
+}
+
+/* Watch Button */
+.watch-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background: rgba(255, 255, 255, 0.05);
+  color: #aaa;
+  font-size: 0.85em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.watch-btn:hover {
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.watch-btn.watched {
+  border-color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
 }
 
 /* Footer */
