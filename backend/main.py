@@ -428,28 +428,13 @@ async def predicted_movers():
 
             early_warning = alert_map.get(ticker, 0)
 
-            # Momentum scaled to 0-10 (cap at ±20% = ±10 pts)
-            momentum_score = max(min(momentum * 50, 10), -10)
-
-            mover_score = (
-                0.5 * early_warning
-                + 0.3 * momentum_score
-                + 0.2 * price_level_bonus
-            )
-
-            label = "NEUTRAL"
-            if mover_score >= 7:
-                label = "BREAKOUT"
-            elif mover_score >= 4:
-                label = "WATCH"
-
             results.append({
                 "ticker": ticker,
-                "mover_score": round(mover_score, 2),
-                "label": label,
+                "momentum_raw": momentum,
                 "momentum_pct": round(momentum * 100, 2),
                 "near_52w_high": near_52w_high,
                 "near_round_number": near_round,
+                "price_level_bonus": price_level_bonus,
                 "current_price": round(close_today, 2),
                 "early_warning_score": early_warning,
             })
@@ -457,6 +442,40 @@ async def predicted_movers():
         except Exception as e:
             print(f"Error processing {ticker} for movers: {e}")
             continue
+
+    # Z-score normalise momentum across the batch
+    if len(results) >= 2:
+        momentums = np.array([r["momentum_raw"] for r in results])
+        std = np.std(momentums)
+        if std == 0:
+            momentum_z_scores = np.zeros_like(momentums, dtype=float)
+        else:
+            momentum_z_scores = (momentums - np.mean(momentums)) / std
+    else:
+        momentum_z_scores = np.zeros(len(results), dtype=float)
+
+    for i, r in enumerate(results):
+        momentum_z = float(momentum_z_scores[i])
+        # Scale z-score to 0-10 range (cap at ±3 std devs = ±10 pts)
+        momentum_z_scaled = max(min(momentum_z * (10 / 3), 10), -10)
+
+        mover_score = (
+            0.4 * r["early_warning_score"]
+            + 0.4 * momentum_z_scaled
+            + 0.2 * r["price_level_bonus"]
+        )
+
+        label = "NEUTRAL"
+        if mover_score >= 4.0:
+            label = "BREAKOUT"
+        elif mover_score >= 2.0:
+            label = "WATCH"
+
+        r["mover_score"] = round(mover_score, 2)
+        r["label"] = label
+        # Clean up internal fields
+        del r["momentum_raw"]
+        del r["price_level_bonus"]
 
     results.sort(key=lambda x: x["mover_score"], reverse=True)
 
