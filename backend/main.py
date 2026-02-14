@@ -3,7 +3,6 @@ import asyncio
 import httpx
 import numpy as np
 import yfinance as yf
-import random
 import time
 from datetime import date, timedelta
 from typing import List, Dict, Union, Any
@@ -112,10 +111,6 @@ async def scheduled_update_loop():
         # Wait for 1 hour (3600 seconds)
         await asyncio.sleep(3600)
         
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    # No pool to close, no action needed here.
-    pass
 
 # ---------------------------
 # HELPER FUNCTIONS (ASYNC DATA COLLECTION)
@@ -278,8 +273,6 @@ async def trending_hype():
             continue # Continue to the next ticker
     
     successful_results = [r for r in raw_results if isinstance(r, dict) and "ticker" in r]
-
-    successful_results = [r for r in raw_results if isinstance(r, dict) and "ticker" in r]
     
     # --- Separate and Score Data ---
     stock_results = [r for r in successful_results if r["ticker"] in STOCK_TICKERS]
@@ -353,104 +346,15 @@ async def trending_cached_hype():
         print(f"Supabase READ ERROR: {type(e).__name__}: {e}")
         return {"error": f"Failed to read from database: {e}"}, 500
 
-from pydantic import BaseModel # You may need to add this import if it's missing!
+from fastapi.responses import JSONResponse
 
-# --- Pydantic Model for Premium Analysis (Add this near the top of main.py if not present) ---
-class WalkForwardResult(BaseModel):
-    ticker: str
-    optimal_params: Dict[str, Union[str, float]] # Added Union[str, float] to allow "Strategy" string
-    performance_metrics: Dict[str, float]
-    trading_periods: List[Dict[str, Any]]
-
-# Mock Function to Simulate Heavy Walk-Forward Analysis
-@app.get("/premium/walk_forward/{ticker}", response_model=WalkForwardResult)
+@app.get("/premium/walk_forward/{ticker}")
 def get_walk_forward_analysis(ticker: str):
-    """
-    Simulates a heavy Walk-Forward Analysis for a given ticker,
-    introducing a delay to mimic complex computation.
-    """
-    import time
-    import random
-
-    # Simulate heavy computation delay (2-5 seconds)
-    time.sleep(random.uniform(2, 5))
-
-    # Mock Data Generation
-    optimal_fast_ema = round(random.uniform(5, 15), 1)
-    optimal_slow_ema = round(random.uniform(20, 50), 1)
-    
-    sharpe = round(random.uniform(1.2, 2.5), 2)
-    cagr = round(random.uniform(0.15, 0.45), 4)
-    max_drawdown = round(random.uniform(-0.10, -0.30), 4)
-
-    periods = []
-    # Generate 5 mock trading periods
-    for i in range(5):
-        periods.append({
-            "period": f"P{i+1}",
-            "start_date": f"2023-01-01 + {i} mo",
-            "end_date": f"2023-03-31 + {i} mo",
-            "return": round(random.uniform(-0.02, 0.15), 4) # Allow negative returns for realism
-        })
-
-    return {
-        "ticker": ticker.upper(),
-        "optimal_params": {
-            "Fast_EMA": optimal_fast_ema,
-            "Slow_EMA": optimal_slow_ema,
-            "Strategy": "Dual EMA Crossover"
-        },
-        "performance_metrics": {
-            "Sharpe_Ratio": sharpe,
-            "CAGR": cagr,
-            "Max_Drawdown": max_drawdown
-        },
-        "trading_periods": periods
-    }
-
-# Add this new endpoint to your FastAPI app
-@app.get("/strategies/thematic")
-async def get_thematic_sectors():
-    # You can later automate this with a stock API,
-    # but hardcoding the "Official" list first ensures the UI looks full.
-    return {
-        "Semiconductors": [
-            {"symbol": "NVDA", "price": 145.20},
-            {"symbol": "AMD", "price": 155.10},
-            {"symbol": "TSM", "price": 190.50},
-            {"symbol": "AVGO", "price": 172.30}
-        ],
-        "Cyber-Defense": [
-            {"symbol": "CRWD", "price": 280.40},
-            {"symbol": "PANW", "price": 360.15},
-            {"symbol": "FTNT", "price": 75.20},
-            {"symbol": "OKTA", "price": 90.10}
-        ],
-        "FinTech & Payments": [
-            {"symbol": "PYPL", "price": 82.50},
-            {"symbol": "SQ", "price": 75.10},
-            {"symbol": "V", "price": 290.30},
-            {"symbol": "MA", "price": 510.40}
-        ],
-        "Green Energy": [
-            {"symbol": "TSLA", "price": 320.10},
-            {"symbol": "ENPH", "price": 110.45},
-            {"symbol": "FSLR", "price": 240.20},
-            {"symbol": "NEE", "price": 75.15}
-        ],
-        "Healthcare/BioTech": [
-            {"symbol": "JNJ", "price": 155.30},
-            {"symbol": "PFE", "price": 28.10},
-            {"symbol": "UNH", "price": 540.20},
-            {"symbol": "MRNA", "price": 45.10}
-        ],
-        "Consumer Luxury": [
-            {"symbol": "LVMH", "price": 710.20},
-            {"symbol": "NKE", "price": 78.40},
-            {"symbol": "AMZN", "price": 201.10},
-            {"symbol": "COST", "price": 920.50}
-        ]
-    }
+    """Walk-forward analysis is not yet implemented."""
+    return JSONResponse(
+        status_code=501,
+        content={"detail": "Walk-forward analysis is not yet implemented."}
+    )
 
 # ==========================================
 # NEW MEME STOCK ALERT ENDPOINTS

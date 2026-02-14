@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import './MarketScanner.css';
 
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 const MarketScanner = () => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [sortBy, setSortBy] = useState('alert_score');
+  const [lastScanned, setLastScanned] = useState(null);
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -22,6 +23,17 @@ const MarketScanner = () => {
         }
         
         setAlerts(data);
+
+        // Use the most recent updated_at from Supabase if available
+        const timestamps = data
+          .map(a => a.updated_at)
+          .filter(Boolean)
+          .sort()
+          .reverse();
+        if (timestamps.length > 0) {
+          setLastScanned(new Date(timestamps[0]));
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching alerts:', error);
@@ -85,6 +97,11 @@ const MarketScanner = () => {
 
       {loading ? (
         <h3 className="loading-message">Loading market data...</h3>
+      ) : alerts.length === 0 ? (
+        <div className="empty-state">
+          <h3>No alerts available</h3>
+          <p>The scanner has not yet collected data. Trigger a scan via the <code>/alerts/scan</code> endpoint or wait for the next scheduled update.</p>
+        </div>
       ) : (
         <>
           <div className="scanner-controls">
@@ -188,6 +205,11 @@ const MarketScanner = () => {
 
           <footer className="dashboard-footer">
             Monitoring {alerts.length} stocks. Auto-refresh every 5 minutes.
+            {lastScanned && (
+              <span className="last-scanned">
+                {' '}| Last scanned: {lastScanned.toLocaleString()}
+              </span>
+            )}
           </footer>
         </>
       )}
