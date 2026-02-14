@@ -8,6 +8,7 @@ const MarketScanner = () => {
   const [loading, setLoading] = useState(true);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [sortBy, setSortBy] = useState('alert_score');
+  const [lastScanned, setLastScanned] = useState(null);
 
   useEffect(() => {
     const fetchAlerts = async () => {
@@ -22,6 +23,17 @@ const MarketScanner = () => {
         }
         
         setAlerts(data);
+
+        // Use the most recent updated_at from Supabase if available
+        const timestamps = data
+          .map(a => a.updated_at)
+          .filter(Boolean)
+          .sort()
+          .reverse();
+        if (timestamps.length > 0) {
+          setLastScanned(new Date(timestamps[0]));
+        }
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching alerts:', error);
@@ -193,6 +205,11 @@ const MarketScanner = () => {
 
           <footer className="dashboard-footer">
             Monitoring {alerts.length} stocks. Auto-refresh every 5 minutes.
+            {lastScanned && (
+              <span className="last-scanned">
+                {' '}| Last scanned: {lastScanned.toLocaleString()}
+              </span>
+            )}
           </footer>
         </>
       )}
