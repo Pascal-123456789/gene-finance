@@ -44,7 +44,7 @@ Key API endpoints:
 - `/alerts/cached` — Fast cached alerts from Supabase (used by frontend)
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
-- `/movers/predicted` — Composite mover score (50% early_warning + 30% momentum + 20% price level bonus), labels BREAKOUT/WATCH/NEUTRAL, saves to `predicted_movers` table
+- `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table
 - `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
 - `/stock/{ticker}` — Single stock info via yfinance
 
