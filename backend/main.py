@@ -3,7 +3,6 @@ import asyncio
 import httpx
 import numpy as np
 import yfinance as yf
-import random
 import time
 from datetime import date, timedelta
 from typing import List, Dict, Union, Any
@@ -356,50 +355,6 @@ def get_walk_forward_analysis(ticker: str):
         status_code=501,
         content={"detail": "Walk-forward analysis is not yet implemented."}
     )
-
-# Add this new endpoint to your FastAPI app
-@app.get("/strategies/thematic")
-async def get_thematic_sectors():
-    # You can later automate this with a stock API,
-    # but hardcoding the "Official" list first ensures the UI looks full.
-    return {
-        "Semiconductors": [
-            {"symbol": "NVDA", "price": 145.20},
-            {"symbol": "AMD", "price": 155.10},
-            {"symbol": "TSM", "price": 190.50},
-            {"symbol": "AVGO", "price": 172.30}
-        ],
-        "Cyber-Defense": [
-            {"symbol": "CRWD", "price": 280.40},
-            {"symbol": "PANW", "price": 360.15},
-            {"symbol": "FTNT", "price": 75.20},
-            {"symbol": "OKTA", "price": 90.10}
-        ],
-        "FinTech & Payments": [
-            {"symbol": "PYPL", "price": 82.50},
-            {"symbol": "SQ", "price": 75.10},
-            {"symbol": "V", "price": 290.30},
-            {"symbol": "MA", "price": 510.40}
-        ],
-        "Green Energy": [
-            {"symbol": "TSLA", "price": 320.10},
-            {"symbol": "ENPH", "price": 110.45},
-            {"symbol": "FSLR", "price": 240.20},
-            {"symbol": "NEE", "price": 75.15}
-        ],
-        "Healthcare/BioTech": [
-            {"symbol": "JNJ", "price": 155.30},
-            {"symbol": "PFE", "price": 28.10},
-            {"symbol": "UNH", "price": 540.20},
-            {"symbol": "MRNA", "price": 45.10}
-        ],
-        "Consumer Luxury": [
-            {"symbol": "LVMH", "price": 710.20},
-            {"symbol": "NKE", "price": 78.40},
-            {"symbol": "AMZN", "price": 201.10},
-            {"symbol": "COST", "price": 920.50}
-        ]
-    }
 
 # ==========================================
 # NEW MEME STOCK ALERT ENDPOINTS

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaChartLine, FaLock, FaBars, FaCalculator, FaLayerGroup } from 'react-icons/fa';
+import { FaFire, FaChartLine, FaLock, FaBars } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -12,92 +12,6 @@ const getHypeClass = (score) => {
     if (score < -1.0) return 'ticker-card hype-negative-strong';
     if (score < -0.3) return 'ticker-card hype-negative';
     return 'ticker-card hype-neutral';
-};
-
-// --- COMPONENT: GrowthModeler ---
-const GrowthModeler = ({ setCurrentView, setSectorFilter }) => {
-    const [mode, setMode] = useState('predict');
-    const [calc, setCalc] = useState({ initial: 1000, monthly: 100, years: 10, rate: 0.08, target: 100000 });
-
-    const getPortfolioSuggestion = (rate) => {
-        if (rate <= 0.05) return { text: "Conservative: 80% Bonds, 20% Blue Chip Stocks", sector: "thematic", filter: "Consumer Luxury"};
-        if (rate <= 0.09) return { text: "Balanced: 60% S&P 500 ETF, 40% Growth Stocks", sector: "thematic", filter: "Semiconductors"};
-        return { text: "Aggressive: 70% Tech/Growth, 30% Emerging Sectors", sector: "thematic", filter: "Cyber-Defense"};
-    };
-
-    const calculateOutput = () => {
-        const { initial, monthly, years, rate, target } = calc;
-        const r = rate / 12;
-        if (mode === 'predict') {
-            const n = years * 12;
-            const compoundFactor = Math.pow(1 + r, n);
-            const total = (initial * compoundFactor) + (monthly * (compoundFactor - 1) / r);
-            return { label: "Estimated Future Value", value: `$${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}` };
-        } else {
-            const nMonths = Math.log((target * r + monthly) / (initial * r + monthly)) / Math.log(1 + r);
-            const nYears = (nMonths / 12).toFixed(1);
-            return { label: "Realistic Timeline", value: `${nYears} Years` };
-        }
-    };
-
-    const result = calculateOutput();
-    const suggestion = getPortfolioSuggestion(calc.rate);
-
-    return (
-        <div className="content-area">
-            <div className="card-header">
-                <h2>📈 Growth Modeler</h2>
-                <button className="mode-toggle" onClick={() => setMode(mode === 'predict' ? 'goal' : 'predict')}>
-                    {mode === 'predict' ? "Or tell us what you want to reach" : "Back to Predict Growth"}
-                </button>
-            </div>
-
-            <div className="calc-grid">
-                <div className="input-group">
-                    <label>Starting Amount ($)</label>
-                    <input type="number" value={calc.initial} onChange={e => setCalc({ ...calc, initial: +e.target.value })} />
-                </div>
-                <div className="input-group">
-                    <label>Monthly Addition ($)</label>
-                    <input type="number" value={calc.monthly} onChange={e => setCalc({ ...calc, monthly: +e.target.value })} />
-                </div>
-
-                {mode === 'predict' ? (
-                    <div className="input-group">
-                        <label>Years to Invest</label>
-                        <input type="number" value={calc.years} onChange={e => setCalc({ ...calc, years: +e.target.value })} />
-                    </div>
-                ) : (
-                        <div className="input-group">
-                            <label>Target Goal ($)</label>
-                            <input type="number" value={calc.target} onChange={e => setCalc({ ...calc, target: +e.target.value })} />
-                        </div>
-                    )}
-
-                <div className="input-group">
-                    <label>Strategy (Expected Return)</label>
-                    <select value={calc.rate} onChange={e => setCalc({ ...calc, rate: +e.target.value })}>
-                        <option value={0.04}>Safe (4% Annually)</option>
-                        <option value={0.08}>Balanced (8% Annually)</option>
-                        <option value={0.12}>Aggressive (12% Annually)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="result-display">
-                <h3>{result.label}: <span>{result.value}</span></h3>
-                <div className="portfolio-suggestion"
-                    onClick={() => {
-                        setSectorFilter(suggestion.filter);
-                        setCurrentView(suggestion.sector);
-                    }}
-                    style={{ cursor: 'pointer' }}>
-                    <p><strong>Suggested Allocation:</strong> {suggestion.text}</p>
-                    <span className="view-sector-link">Click here to view these sectors →</span>
-                </div>
-            </div>
-        </div>
-    );
 };
 
 // --- COMPONENT: PremiumAnalysisView ---
@@ -173,46 +87,6 @@ const PremiumAnalysisView = ({ data }) => {
     );
 };
 
-// --- COMPONENT: ThematicView ---
-const ThematicView = ({ filterTerm }) => {
-    const [sectors, setSectors] = useState({});
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetch(`${API_BASE_URL}/strategies/thematic`)
-            .then(res => res.json())
-            .then(data => { setSectors(data); setLoading(false); })
-            .catch(err => { console.error(err); setLoading(false); });
-    }, []);
-
-    if (loading) return <div className="content-area"><h3 className="loading-message">Loading sector data...</h3></div>;
-
-    const filteredSectors = filterTerm
-        ? { [filterTerm]: sectors[filterTerm] }
-        : sectors;
-
-    return (
-        <div className="content-area thematic-page">
-            <h1 className="main-brand-title">📊 Stock Sectors</h1>
-            <p className="main-brand-tagline">Thematic investment strategies by sector</p>
-            {Object.keys(filteredSectors).length === 0 && <p>No sectors available.</p>}
-            {Object.entries(filteredSectors).map(([sectorName, stocks]) => (
-                <div key={sectorName} className="sector-group">
-                    <h2 className="sector-title">{sectorName}</h2>
-                    <div className="sector-stocks">
-                        {stocks.map(stock => (
-                            <div key={stock.symbol} className="stock-card">
-                                <span className="stock-symbol">{stock.symbol}</span>
-                                <span className="stock-price">${stock.price.toFixed(2)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-};
-
 // --- COMPONENT: TickerDetailModal ---
 const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, setModalError }) => {
     if (!modalData && !modalLoading && !modalError) return null;
@@ -250,8 +124,6 @@ export default function App() {
     const [modalData, setModalData] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
-    const [sectorFilter, setSectorFilter] = useState("");
-
     // Fetch data for Premium Analysis (still uses old endpoint for now)
     useEffect(() => {
         fetch(`${API_BASE_URL}/trending/cached_hype`)
@@ -287,10 +159,6 @@ export default function App() {
                 );
             case 'dashboard':
                 return <MarketScanner />;
-            case 'thematic':
-                return <ThematicView filterTerm={sectorFilter} />;
-            case 'modeler':
-                return <GrowthModeler setCurrentView={setCurrentView} setSectorFilter={setSectorFilter} />;
             case 'premium':
                 return <PremiumAnalysisView data={data} />;
             default:
@@ -316,14 +184,6 @@ export default function App() {
                         <div className={`nav-item ${currentView === 'premium' ? 'active' : ''}`}
                              onClick={() => setCurrentView('premium')}>
                             <FaLock /> <span>Premium Access</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'thematic' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('thematic')}>
-                            <FaLayerGroup /> <span>Stock Sectors</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'modeler' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('modeler')}>
-                            <FaCalculator /> <span>Growth Modeler</span>
                         </div>
                     </nav>
                     <div className="hype-indicator"><FaFire /> <span>Scanner Online</span></div>
