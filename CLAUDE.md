@@ -44,14 +44,16 @@ Key API endpoints:
 - `/alerts/cached` — Fast cached alerts from Supabase (used by frontend)
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
+- `/movers/predicted` — Composite mover score (50% early_warning + 30% momentum + 20% price level bonus), labels BREAKOUT/WATCH/NEUTRAL, saves to `predicted_movers` table
 - `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
 - `/stock/{ticker}` — Single stock info via yfinance
 
 Caching: 5-minute in-memory TTL for expensive endpoints; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/premium), and ticker detail modal
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/premium), and ticker detail modal
 - **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, and last-scanned timestamp
+- **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
 
 State management is local React hooks only (useState/useEffect). No router library — views are toggled via state.
@@ -59,6 +61,7 @@ State management is local React hooks only (useState/useEffect). No router libra
 ### Supabase Tables
 - **ticker_hype** — Stores hype scores per ticker
 - **meme_alerts** — Stores alert scores, levels, and signal breakdowns per ticker
+- **predicted_movers** — Stores mover scores, labels, momentum, and price level flags per ticker
 
 ### Styling
 Dark theme with green (#00ff84) and amber (#ff9900) accents. CSS files are colocated with their components. Sidebar collapses from 250px to 70px.
