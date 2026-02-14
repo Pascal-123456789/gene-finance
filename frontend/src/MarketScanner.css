@@ -279,6 +279,10 @@
   background: linear-gradient(90deg, #4fc3f7 0%, #29b6f6 100%);
 }
 
+.signal-fill.social {
+  background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+}
+
 .signal-row .signal-value {
   min-width: 40px;
   text-align: right;

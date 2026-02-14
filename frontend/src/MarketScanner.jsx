@@ -183,21 +183,16 @@ const MarketScanner = () => {
                   </div>
 
                   <div className="signal-row">
-                    <span className="signal-label">Sentiment</span>
-                    <span className="sentiment-indicator">
-                      {getSentimentEmoji(alert.sentiment_score || 0)}
-                      <span className="sentiment-score">
-                        {(alert.sentiment_score || 0).toFixed(2)}
-                      </span>
+                    <span className="signal-label">Social</span>
+                    <span className="signal-bar">
+                      <div className="signal-fill social" style={{width: `${(alert.social_score || 0) * 10}%`}}/>
                     </span>
-                    <span className="news-count">
-                      📰 {alert.news_count || 0}
-                    </span>
+                    <span className="signal-value">{alert.social_score || 0}/10</span>
                   </div>
                 </div>
 
                 <div className="signals-triggered">
-                  {alert.signals_triggered || 0}/2 signals active
+                  {alert.signals_triggered || 0}/3 signals active
                 </div>
               </div>
             ))}
@@ -242,13 +237,18 @@ const MarketScanner = () => {
             </div>
 
             <div className="modal-section">
+              <h3>💬 Social Buzz (Reddit/WSB)</h3>
+              <p>Score: {selectedAlert.social_score || 0}/10</p>
+            </div>
+
+            <div className="modal-section">
               <h3>💭 Sentiment & News</h3>
               <p>Sentiment: {(selectedAlert.sentiment_score || 0).toFixed(3)} {getSentimentEmoji(selectedAlert.sentiment_score || 0)}</p>
               <p>News Articles (7d): {selectedAlert.news_count || 0}</p>
             </div>
 
             <div className="modal-footer">
-              Signals: {selectedAlert.signals_triggered || 0}/2 active
+              Signals: {selectedAlert.signals_triggered || 0}/3 active
             </div>
           </div>
         </div>

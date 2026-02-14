@@ -21,6 +21,8 @@ class MemeStockDetector:
     
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=10)
+        self._apewisdom_cache = None
+        self._apewisdom_ts = None
     
     # ==========================================
     # SIGNAL 1: UNUSUAL OPTIONS ACTIVITY
@@ -221,108 +223,119 @@ class MemeStockDetector:
             }
     
     # ==========================================
-    # SIGNAL 3: SOCIAL BUZZ (StockTwits)
+    # SIGNAL 3: SOCIAL BUZZ (ApeWisdom / Reddit)
     # ==========================================
-    
+
+    async def fetch_apewisdom_data(self) -> List[Dict]:
+        """
+        Fetches the full trending list from ApeWisdom (free, no key).
+        Caches for 10 minutes to avoid hammering the API.
+        """
+        now = datetime.now()
+        if (
+            self._apewisdom_cache is not None
+            and self._apewisdom_ts is not None
+            and (now - self._apewisdom_ts).total_seconds() < 600
+        ):
+            return self._apewisdom_cache
+
+        try:
+            url = "https://apewisdom.io/api/v1.0/filter/all-stocks"
+            response = await self.client.get(url)
+            if response.status_code != 200:
+                print(f"ApeWisdom API error: {response.status_code}")
+                return self._apewisdom_cache or []
+
+            data = response.json()
+            results = data.get("results", [])
+            self._apewisdom_cache = results
+            self._apewisdom_ts = now
+            return results
+        except Exception as e:
+            print(f"ApeWisdom fetch error: {e}")
+            return self._apewisdom_cache or []
+
     async def get_social_signal(self, ticker: str) -> Dict:
         """
-        Detects social media buzz (free via StockTwits API)
-        
+        Detects social media buzz via ApeWisdom (Reddit/WSB mentions).
+
         Key indicators:
-        - Message volume (total mentions)
-        - Sentiment ratio (bullish vs bearish)
-        - Message velocity (spiking mentions)
-        
-        Rate limit: 200 requests/hour (free)
+        - Mention count (24h)
+        - Rank among all tickers
+        - Upvotes
+
         Returns score 0-10
         """
         try:
-            # StockTwits API endpoint
-            url = f"https://api.stocktwits.com/api/2/streams/symbol/{ticker}.json"
-            
-            response = await self.client.get(url)
-            
-            if response.status_code != 200:
-                return {
-                    "score": 0,
-                    "signal": "ERROR",
-                    "message_volume": 0,
-                    "sentiment_ratio": 0,
-                    "unusual_buzz": False,
-                    "error": f"Status {response.status_code}"
-                }
-            
-            data = response.json()
-            messages = data.get('messages', [])
-            
-            if not messages:
+            all_tickers = await self.fetch_apewisdom_data()
+
+            # Find this ticker in the list
+            match = None
+            for item in all_tickers:
+                if item.get("ticker", "").upper() == ticker.upper():
+                    match = item
+                    break
+
+            if not match:
                 return {
                     "score": 0,
                     "signal": "NO_DATA",
-                    "message_volume": 0,
-                    "sentiment_ratio": 0,
+                    "mentions": 0,
+                    "rank": 0,
+                    "upvotes": 0,
                     "unusual_buzz": False
                 }
-            
-            # Count messages and sentiment
-            message_count = len(messages)
-            bullish = 0
-            bearish = 0
-            
-            for msg in messages:
-                sentiment = msg.get('entities', {}).get('sentiment', {}).get('basic')
-                if sentiment == 'Bullish':
-                    bullish += 1
-                elif sentiment == 'Bearish':
-                    bearish += 1
-            
-            total_sentiment = bullish + bearish
-            sentiment_ratio = bullish / (total_sentiment + 1) if total_sentiment > 0 else 0.5
-            
+
+            mentions = match.get("mentions", 0)
+            rank = match.get("rank", 999)
+            upvotes = match.get("upvotes", 0)
+
             # Scoring logic
             score = 0
             unusual_buzz = False
-            
-            # High message volume (30 messages in recent stream is a lot)
-            if message_count > 25:
+
+            # Rank-based scoring (top of Reddit = high signal)
+            if rank <= 5:
                 score += 5
                 unusual_buzz = True
-            elif message_count > 15:
+            elif rank <= 15:
                 score += 3
-            elif message_count > 10:
+            elif rank <= 30:
+                score += 2
+            elif rank <= 50:
                 score += 1
-            
-            # Strong bullish sentiment (> 70% bullish)
-            if sentiment_ratio > 0.7 and total_sentiment > 5:
+
+            # Mention count scoring
+            if mentions >= 100:
                 score += 4
                 unusual_buzz = True
-            elif sentiment_ratio > 0.6 and total_sentiment > 3:
+            elif mentions >= 50:
+                score += 3
+            elif mentions >= 20:
                 score += 2
-            
-            # Strong bearish sentiment can also indicate unusual activity
-            if sentiment_ratio < 0.3 and total_sentiment > 5:
-                score += 2  # Note: bearish buzz also matters
-            
+            elif mentions >= 10:
+                score += 1
+
             # Cap at 10
             score = min(score, 10)
-            
+
             return {
                 "score": score,
                 "signal": "STRONG" if score >= 7 else "MODERATE" if score >= 4 else "WEAK",
-                "message_volume": message_count,
-                "sentiment_ratio": round(sentiment_ratio, 2),
-                "bullish_count": bullish,
-                "bearish_count": bearish,
+                "mentions": mentions,
+                "rank": rank,
+                "upvotes": upvotes,
                 "unusual_buzz": unusual_buzz
             }
-            
+
         except Exception as e:
             print(f"Social signal error for {ticker}: {e}")
             return {
                 "score": 0,
                 "signal": "ERROR",
-                "message_volume": 0,
-                "sentiment_ratio": 0,
+                "mentions": 0,
+                "rank": 0,
+                "upvotes": 0,
                 "unusual_buzz": False,
                 "error": str(e)
             }
@@ -333,53 +346,46 @@ class MemeStockDetector:
     
     async def get_early_warning_score(self, ticker: str) -> Dict:
         """
-        Combines two signals into final early warning score
-    
+        Combines three signals into final early warning score
+
         Weighting:
-        - Options: 55% (institutional money flow - most predictive)
-        - Volume: 45% (confirms unusual activity)
-    
-        Note: Social signal disabled due to API restrictions.
-        Options + Volume provide earlier, more reliable signals.
-    
+        - Options: 40% (institutional money flow)
+        - Volume: 35% (confirms unusual activity)
+        - Social: 25% (Reddit/WSB buzz via ApeWisdom)
+
         Returns:
         - early_warning_score: 0-10
         - alert_level: CRITICAL/HIGH/MEDIUM/LOW
         - signals_triggered: number of strong signals
         """
         ticker = ticker.upper()
-    
-        # Get two signals (skip social - API issues)
+
+        # Get all three signals
         options_data = self.get_options_signal(ticker)
         volume_data = self.get_volume_signal(ticker)
-    
-        # Use dummy social data to maintain response structure
-        social_data = {
-            'score': 0,
-            'signal': 'DISABLED',
-            'message_volume': 0,
-            'sentiment_ratio': 0,
-            'unusual_buzz': False
-        }
-    
-        # Calculate weighted score (two signals only)
+        social_data = await self.get_social_signal(ticker)
+
+        # Calculate weighted score
         options_score = options_data['score']
         volume_score = volume_data['score']
-    
+        social_score = social_data['score']
+
         weighted_score = (
-            0.55 * options_score +    # Increased from 40%
-            0.45 * volume_score       # Increased from 35%
+            0.40 * options_score +
+            0.35 * volume_score +
+            0.25 * social_score
         )
-    
-        # Count strong signals (only options + volume)
+
+        # Count strong signals
         signals_triggered = sum([
             options_data.get('unusual_activity', False),
-            volume_data.get('unusual_volume', False)
+            volume_data.get('unusual_volume', False),
+            social_data.get('unusual_buzz', False)
         ])
     
         # Determine alert level
         if weighted_score >= 7.5 and signals_triggered >= 2:
-            alert_level = "CRITICAL"  # Strong early warning
+            alert_level = "CRITICAL"
         elif weighted_score >= 6.0 or signals_triggered >= 2:
             alert_level = "HIGH"
         elif weighted_score >= 4.0:
@@ -476,7 +482,7 @@ async def main():
         print(f"   📈 Volume: {vol.get('volume_ratio_today', 0)}x average")
         
         soc = r['social_signal']
-        print(f"   💬 Social: {soc.get('message_volume', 0)} messages, {soc.get('sentiment_ratio', 0)*100:.0f}% bullish")
+        print(f"   💬 Social: {soc.get('mentions', 0)} mentions, rank #{soc.get('rank', 'N/A')}")
         print()
     
     await detector.close()
