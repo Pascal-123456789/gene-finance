@@ -8,6 +8,7 @@ import time
 from datetime import date, timedelta
 from typing import List, Dict, Union, Any
 from pydantic import BaseModel
+from meme_detector import MemeStockDetector
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -89,7 +90,11 @@ async def startup_event():
     
     # Start the Background Loop
     asyncio.create_task(scheduled_update_loop())
-
+    
+    # Initialize the meme detector
+    global detector
+    detector = MemeStockDetector()
+    
 async def scheduled_update_loop():
     """
     This runs forever in the background. 
@@ -446,3 +451,148 @@ async def get_thematic_sectors():
             {"symbol": "COST", "price": 920.50}
         ]
     }
+
+# ==========================================
+# NEW MEME STOCK ALERT ENDPOINTS
+# ==========================================
+
+@app.get("/alerts/scan")
+async def scan_for_alerts():
+    """
+    Main endpoint - scans for unified alerts
+    NOW INCLUDES: Options + Volume + Sentiment + Price
+    """
+    global detector
+    
+    if not detector:
+        detector = MemeStockDetector()
+    
+    # Expanded 50-ticker watchlist organized by sector
+    watchlist = [
+        # === MEGA CAP TECH (8) ===
+        "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX",
+        
+        # === SEMICONDUCTORS (6) ===
+        "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
+        
+        # === FINTECH & PAYMENTS (7) ===
+        "V", "MA", "PYPL", "SQ", "COIN", "HOOD", "SOFI",
+        
+        # === MEME STOCKS (5) ===
+        "GME", "AMC", "PLTR", "SNAP", "RBLX",
+        
+        # === GROWTH TECH (6) ===
+        "UBER", "LYFT", "AIRBNB", "DASH", "SPOT", "ZM",
+        
+        # === FINANCE (5) ===
+        "JPM", "BAC", "GS", "MS", "WFC",
+        
+        # === HEALTHCARE (5) ===
+        "JNJ", "UNH", "PFE", "ABBV", "LLY",
+        
+        # === ENERGY (4) ===
+        "XOM", "CVX", "COP", "SLB",
+        
+        # === CONSUMER (4) ===
+        "WMT", "HD", "NKE", "MCD",
+    ]
+    
+    print(f"Scanning {len(watchlist)} tickers for unified alerts...")
+    
+    # Get alert data (options + volume)
+    results = await detector.scan_watchlist(watchlist)
+    
+    # ADD: Sentiment + Price for each ticker
+    for item in results:
+        ticker = item["ticker"]
+        
+        # Add sentiment
+        try:
+            sentiment_data = await async_news_sentiment_and_volume(ticker)
+            item["sentiment_score"] = sentiment_data.get("social_raw", 0.0)
+            item["news_count"] = sentiment_data.get("news_raw", 0)
+        except Exception as e:
+            item["sentiment_score"] = 0.0
+            item["news_count"] = 0
+        
+        # Add price
+        try:
+            stock = yf.Ticker(ticker)
+            info = stock.info
+            item["current_price"] = info.get("regularMarketPrice", 0)
+            item["price_change_pct"] = info.get("regularMarketChangePercent", 0)
+        except Exception as e:
+            item["current_price"] = 0
+            item["price_change_pct"] = 0
+    
+    # Save to Supabase
+    if supabase:
+        try:
+            records = []
+            for item in results:
+                records.append({
+                    "ticker": item["ticker"],
+                    "alert_score": item["early_warning_score"],
+                    "alert_level": item["alert_level"],
+                    "signals_triggered": item["signals_triggered"],
+                    "options_score": item["options_signal"]["score"],
+                    "volume_score": item["volume_signal"]["score"],
+                    "social_score": item["social_signal"]["score"],
+                    "sentiment_score": item.get("sentiment_score", 0),
+                    "news_count": item.get("news_count", 0),
+                    "current_price": item.get("current_price", 0),
+                    "price_change_pct": item.get("price_change_pct", 0),
+                })
+            
+            response = supabase.table('meme_alerts').upsert(records, on_conflict='ticker').execute()
+            print(f"Saved {len(records)} unified alerts to database")
+            
+        except Exception as e:
+            print(f"Database save error: {e}")
+    
+    return results
+
+@app.get("/alerts/cached")
+async def get_cached_alerts():
+    """Get alerts from database (fast)"""
+    if not supabase:
+        return {"error": "Database not configured"}
+    
+    try:
+        response = supabase.table('meme_alerts').select('*').execute()
+        results = response.data
+        
+        if not results:
+            return []
+        
+        # Rename alert_score to early_warning_score for frontend compatibility
+        for item in results:
+            if 'alert_score' in item:
+                item['early_warning_score'] = item['alert_score']
+        
+        # Sort by alert_score
+        results_sorted = sorted(results, key=lambda x: x.get('alert_score', 0), reverse=True)
+        
+        return results_sorted
+        
+    except Exception as e:
+        print(f"Database read error: {e}")
+        return {"error": str(e)}
+        
+@app.get("/alerts/{ticker}")
+async def get_alert_for_ticker(ticker: str):
+    """Get detailed alert info for one ticker"""
+    global detector
+    
+    if not detector:
+        detector = MemeStockDetector()
+    
+    result = await detector.get_early_warning_score(ticker.upper())
+    return result
+    
+@app.on_event("shutdown")
+async def shutdown():
+    """Cleanup on shutdown"""
+    global detector
+    if detector:
+        await detector.close()
