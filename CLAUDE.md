@@ -37,7 +37,7 @@ Both servers must run simultaneously for full functionality. The frontend reads 
 
 ### Backend (backend/)
 - **main.py** — FastAPI app with all API endpoints, CORS config, Supabase integration, caching, and a background loop that refreshes data every hour
-- **meme_detector.py** — Three-signal early warning system (options flow, volume spikes, social sentiment) that scores tickers 0-10 and assigns alert levels (CRITICAL/HIGH/MEDIUM/LOW)
+- **meme_detector.py** — Three-signal early warning system (options flow, volume spikes, Reddit/WSB social buzz via ApeWisdom) that scores tickers 0-10 and assigns alert levels (CRITICAL/HIGH/MEDIUM/LOW). ApeWisdom data is cached for 10 minutes.
 
 Key API endpoints:
 - `/alerts/scan` — Full 50-ticker scan (expensive, triggers API calls)
@@ -51,9 +51,10 @@ Key API endpoints:
 Caching: 5-minute in-memory TTL for expensive endpoints; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/premium), and ticker detail modal
-- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, and last-scanned timestamp
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/watchlist/premium), and ticker detail modal
+- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, and Watch button per card
 - **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
+- **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
 
 State management is local React hooks only (useState/useEffect). No router library — views are toggled via state.
@@ -70,5 +71,5 @@ Dark theme with green (#00ff84) and amber (#ff9900) accents. CSS files are coloc
 - No TypeScript — plain JavaScript (JSX)
 - No test suite or testing framework configured
 - No CI/CD pipelines
-- Alert scoring weights: 55% options + 45% volume (social signal disabled due to StockTwits API limits)
-- Data sources: yfinance (free, no key), Finnhub (free tier with rate limits)
+- Alert scoring weights: 40% options + 35% volume + 25% social (Reddit/WSB via ApeWisdom)
+- Data sources: yfinance (free, no key), Finnhub (free tier with rate limits), ApeWisdom (free, no key)
