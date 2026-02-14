@@ -1,4 +1,10 @@
-fastapi
 uvicorn
+fastapi
 supabase
 python-dotenv
+httpx
+numpy
+yfinance
+textblob
+nltk
+pydantic
