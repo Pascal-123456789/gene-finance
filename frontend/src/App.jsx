@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaChartLine, FaLock, FaBars } from 'react-icons/fa';
+import { FaFire, FaChartLine, FaLock, FaBars, FaRocket } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
+import PredictedMovers from './PredictedMovers';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -159,6 +160,8 @@ export default function App() {
                 );
             case 'dashboard':
                 return <MarketScanner />;
+            case 'movers':
+                return <PredictedMovers />;
             case 'premium':
                 return <PremiumAnalysisView data={data} />;
             default:
@@ -180,6 +183,10 @@ export default function App() {
                         <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
                              onClick={() => setCurrentView('dashboard')}>
                             <FaFire /> <span>Market Scanner</span>
+                        </div>
+                        <div className={`nav-item ${currentView === 'movers' ? 'active' : ''}`}
+                             onClick={() => setCurrentView('movers')}>
+                            <FaRocket /> <span>Predicted Movers</span>
                         </div>
                         <div className={`nav-item ${currentView === 'premium' ? 'active' : ''}`}
                              onClick={() => setCurrentView('premium')}>
