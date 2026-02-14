@@ -347,60 +347,15 @@ async def trending_cached_hype():
         print(f"Supabase READ ERROR: {type(e).__name__}: {e}")
         return {"error": f"Failed to read from database: {e}"}, 500
 
-from pydantic import BaseModel # You may need to add this import if it's missing!
+from fastapi.responses import JSONResponse
 
-# --- Pydantic Model for Premium Analysis (Add this near the top of main.py if not present) ---
-class WalkForwardResult(BaseModel):
-    ticker: str
-    optimal_params: Dict[str, Union[str, float]] # Added Union[str, float] to allow "Strategy" string
-    performance_metrics: Dict[str, float]
-    trading_periods: List[Dict[str, Any]]
-
-# Mock Function to Simulate Heavy Walk-Forward Analysis
-@app.get("/premium/walk_forward/{ticker}", response_model=WalkForwardResult)
+@app.get("/premium/walk_forward/{ticker}")
 def get_walk_forward_analysis(ticker: str):
-    """
-    Simulates a heavy Walk-Forward Analysis for a given ticker,
-    introducing a delay to mimic complex computation.
-    """
-    import time
-    import random
-
-    # Simulate heavy computation delay (2-5 seconds)
-    time.sleep(random.uniform(2, 5))
-
-    # Mock Data Generation
-    optimal_fast_ema = round(random.uniform(5, 15), 1)
-    optimal_slow_ema = round(random.uniform(20, 50), 1)
-    
-    sharpe = round(random.uniform(1.2, 2.5), 2)
-    cagr = round(random.uniform(0.15, 0.45), 4)
-    max_drawdown = round(random.uniform(-0.10, -0.30), 4)
-
-    periods = []
-    # Generate 5 mock trading periods
-    for i in range(5):
-        periods.append({
-            "period": f"P{i+1}",
-            "start_date": f"2023-01-01 + {i} mo",
-            "end_date": f"2023-03-31 + {i} mo",
-            "return": round(random.uniform(-0.02, 0.15), 4) # Allow negative returns for realism
-        })
-
-    return {
-        "ticker": ticker.upper(),
-        "optimal_params": {
-            "Fast_EMA": optimal_fast_ema,
-            "Slow_EMA": optimal_slow_ema,
-            "Strategy": "Dual EMA Crossover"
-        },
-        "performance_metrics": {
-            "Sharpe_Ratio": sharpe,
-            "CAGR": cagr,
-            "Max_Drawdown": max_drawdown
-        },
-        "trading_periods": periods
-    }
+    """Walk-forward analysis is not yet implemented."""
+    return JSONResponse(
+        status_code=501,
+        content={"detail": "Walk-forward analysis is not yet implemented."}
+    )
 
 # Add this new endpoint to your FastAPI app
 @app.get("/strategies/thematic")
