@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import './MarketScanner.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -9,11 +10,31 @@ const MarketScanner = () => {
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [sortBy, setSortBy] = useState('alert_score');
   const [lastScanned, setLastScanned] = useState(null);
+  const [historyData, setHistoryData] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [watchlist, setWatchlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('foega_watchlist')) || [];
     } catch { return []; }
   });
+
+  const fetchHistory = async (ticker) => {
+    setHistoryLoading(true);
+    setHistoryData([]);
+    try {
+      const res = await fetch(`${API_BASE_URL}/history/${ticker}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setHistoryData(data.map(d => ({
+          date: new Date(d.recorded_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+          score: d.early_warning_score,
+        })));
+      }
+    } catch (err) {
+      console.error('Error fetching history:', err);
+    }
+    setHistoryLoading(false);
+  };
 
   const toggleWatch = (ticker) => {
     const updated = watchlist.includes(ticker)
@@ -153,7 +174,7 @@ const MarketScanner = () => {
               <div
                 key={alert.ticker || index}
                 className={getAlertClass(alert.alert_level)}
-                onClick={() => setSelectedAlert(alert)}
+                onClick={() => { setSelectedAlert(alert); fetchHistory(alert.ticker); }}
               >
                 <div className="alert-header">
                   <h2 className="alert-ticker">
@@ -265,6 +286,28 @@ const MarketScanner = () => {
               <h3>💭 Sentiment & News</h3>
               <p>Sentiment: {(selectedAlert.sentiment_score || 0).toFixed(3)} {getSentimentEmoji(selectedAlert.sentiment_score || 0)}</p>
               <p>News Articles (7d): {selectedAlert.news_count || 0}</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>📈 7-Day Score History</h3>
+              {historyLoading ? (
+                <p>Loading history...</p>
+              ) : historyData.length < 2 ? (
+                <p className="history-note">Not enough history yet</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={150}>
+                  <LineChart data={historyData}>
+                    <XAxis dataKey="date" tick={{ fill: '#aaa', fontSize: 11 }} />
+                    <YAxis domain={[0, 10]} tick={{ fill: '#aaa', fontSize: 11 }} width={30} />
+                    <Tooltip
+                      contentStyle={{ background: '#1a1a1a', border: '1px solid #444', borderRadius: 6 }}
+                      labelStyle={{ color: '#aaa' }}
+                      itemStyle={{ color: '#00ff88' }}
+                    />
+                    <Line type="monotone" dataKey="score" stroke="#00ff88" strokeWidth={2} dot={{ r: 3, fill: '#00ff88' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             <div className="modal-footer">
