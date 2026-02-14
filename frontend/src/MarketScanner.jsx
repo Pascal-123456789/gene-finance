@@ -85,6 +85,11 @@ const MarketScanner = () => {
 
       {loading ? (
         <h3 className="loading-message">Loading market data...</h3>
+      ) : alerts.length === 0 ? (
+        <div className="empty-state">
+          <h3>No alerts available</h3>
+          <p>The scanner has not yet collected data. Trigger a scan via the <code>/alerts/scan</code> endpoint or wait for the next scheduled update.</p>
+        </div>
       ) : (
         <>
           <div className="scanner-controls">
