@@ -1,0 +1,238 @@
+import React, { useState, useEffect } from 'react';
+import './MarketScanner.css';
+
+const API_BASE_URL = 'http://127.0.0.1:8000';
+
+const MarketScanner = () => {
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAlert, setSelectedAlert] = useState(null);
+  const [sortBy, setSortBy] = useState('alert_score');
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/alerts/cached`);
+        const data = await response.json();
+        
+        if (data.error || !Array.isArray(data)) {
+          setAlerts([]);
+          setLoading(false);
+          return;
+        }
+        
+        setAlerts(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching alerts:', error);
+        setAlerts([]);
+        setLoading(false);
+      }
+    };
+
+    fetchAlerts();
+    const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    switch (sortBy) {
+      case 'volume':
+        return (b.volume_score || 0) - (a.volume_score || 0);
+      case 'sentiment':
+        return (b.sentiment_score || 0) - (a.sentiment_score || 0);
+      case 'price':
+        return Math.abs(b.price_change_pct || 0) - Math.abs(a.price_change_pct || 0);
+      default:
+        return (b.alert_score || 0) - (a.alert_score || 0);
+    }
+  });
+
+  const getAlertClass = (level) => {
+    const levels = { 'CRITICAL': 'alert-critical', 'HIGH': 'alert-high', 'MEDIUM': 'alert-medium' };
+    return `alert-card ${levels[level] || 'alert-low'}`;
+  };
+
+  const getEmoji = (level) => {
+    const emojis = { 'CRITICAL': '🚨', 'HIGH': '⚠️', 'MEDIUM': '⚡' };
+    return emojis[level] || '📊';
+  };
+
+  const getPriceChangeClass = (change) => {
+    if (change > 2) return 'price-up-strong';
+    if (change > 0) return 'price-up';
+    if (change < -2) return 'price-down-strong';
+    if (change < 0) return 'price-down';
+    return 'price-neutral';
+  };
+
+  const getSentimentEmoji = (score) => {
+    if (score > 0.5) return '😊';
+    if (score > 0.2) return '🙂';
+    if (score > -0.2) return '😐';
+    if (score > -0.5) return '😟';
+    return '😢';
+  };
+
+  return (
+    <div className="content-area market-scanner">
+      <div className="header-wrapper">
+        <h1 className="main-brand-title">📊 Market Scanner</h1>
+        <p className="main-brand-tagline">
+          Unified options flow, volume analysis & sentiment tracking
+        </p>
+      </div>
+
+      {loading ? (
+        <h3 className="loading-message">Loading market data...</h3>
+      ) : (
+        <>
+          <div className="scanner-controls">
+            <div className="alert-summary">
+              <div className="stat-box critical">
+                <span className="stat-number">{alerts.filter(a => a.alert_level === 'CRITICAL').length}</span>
+                <span className="stat-label">Critical</span>
+              </div>
+              <div className="stat-box high">
+                <span className="stat-number">{alerts.filter(a => a.alert_level === 'HIGH').length}</span>
+                <span className="stat-label">High</span>
+              </div>
+              <div className="stat-box medium">
+                <span className="stat-number">{alerts.filter(a => a.alert_level === 'MEDIUM').length}</span>
+                <span className="stat-label">Medium</span>
+              </div>
+              <div className="stat-box low">
+                <span className="stat-number">{alerts.filter(a => a.alert_level === 'LOW').length}</span>
+                <span className="stat-label">Monitored</span>
+              </div>
+            </div>
+
+            <div className="sort-controls">
+              <label>Sort by:</label>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                <option value="alert_score">Alert Score</option>
+                <option value="volume">Volume</option>
+                <option value="sentiment">Sentiment</option>
+                <option value="price">Price Change</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="data-list scanner-grid">
+            {sortedAlerts.map((alert, index) => (
+              <div
+                key={alert.ticker || index}
+                className={getAlertClass(alert.alert_level)}
+                onClick={() => setSelectedAlert(alert)}
+              >
+                <div className="alert-header">
+                  <h2 className="alert-ticker">
+                    {getEmoji(alert.alert_level)} {alert.ticker}
+                  </h2>
+                  <span className="alert-score">
+                    {(alert.alert_score || alert.early_warning_score || 0).toFixed(1)}
+                  </span>
+                </div>
+
+                <div className="price-info">
+                  <span className="current-price">
+                    ${(alert.current_price || 0).toFixed(2)}
+                  </span>
+                  <span className={`price-change ${getPriceChangeClass(alert.price_change_pct || 0)}`}>
+                    {(alert.price_change_pct || 0) > 0 ? '+' : ''}
+                    {(alert.price_change_pct || 0).toFixed(2)}%
+                  </span>
+                </div>
+
+                <div className="alert-level-badge">
+                  {alert.alert_level}
+                </div>
+
+                <div className="unified-signals">
+                  <div className="signal-row">
+                    <span className="signal-label">Options</span>
+                    <span className="signal-bar">
+                      <div className="signal-fill" style={{width: `${(alert.options_score || 0) * 10}%`}}/>
+                    </span>
+                    <span className="signal-value">{alert.options_score || 0}/10</span>
+                  </div>
+
+                  <div className="signal-row">
+                    <span className="signal-label">Volume</span>
+                    <span className="signal-bar">
+                      <div className="signal-fill volume" style={{width: `${(alert.volume_score || 0) * 10}%`}}/>
+                    </span>
+                    <span className="signal-value">{alert.volume_score || 0}/10</span>
+                  </div>
+
+                  <div className="signal-row">
+                    <span className="signal-label">Sentiment</span>
+                    <span className="sentiment-indicator">
+                      {getSentimentEmoji(alert.sentiment_score || 0)}
+                      <span className="sentiment-score">
+                        {(alert.sentiment_score || 0).toFixed(2)}
+                      </span>
+                    </span>
+                    <span className="news-count">
+                      📰 {alert.news_count || 0}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="signals-triggered">
+                  {alert.signals_triggered || 0}/2 signals active
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <footer className="dashboard-footer">
+            Monitoring {alerts.length} stocks. Auto-refresh every 5 minutes.
+          </footer>
+        </>
+      )}
+
+      {selectedAlert && (
+        <div className="modal-overlay" onClick={() => setSelectedAlert(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setSelectedAlert(null)}>×</button>
+            <h2>{selectedAlert.ticker} - Complete Analysis</h2>
+
+            <div className="modal-section">
+              <h3>📊 Overview</h3>
+              <p>Alert Score: {(selectedAlert.alert_score || 0).toFixed(2)}/10</p>
+              <p>Alert Level: <span className={`alert-level-${(selectedAlert.alert_level || 'LOW').toLowerCase()}`}>{selectedAlert.alert_level}</span></p>
+              <p>Price: ${(selectedAlert.current_price || 0).toFixed(2)} 
+                <span className={getPriceChangeClass(selectedAlert.price_change_pct || 0)}>
+                  {' '}({(selectedAlert.price_change_pct || 0) > 0 ? '+' : ''}{(selectedAlert.price_change_pct || 0).toFixed(2)}%)
+                </span>
+              </p>
+            </div>
+
+            <div className="modal-section">
+              <h3>📊 Options Activity</h3>
+              <p>Score: {selectedAlert.options_score || 0}/10</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>📈 Volume Analysis</h3>
+              <p>Score: {selectedAlert.volume_score || 0}/10</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>💭 Sentiment & News</h3>
+              <p>Sentiment: {(selectedAlert.sentiment_score || 0).toFixed(3)} {getSentimentEmoji(selectedAlert.sentiment_score || 0)}</p>
+              <p>News Articles (7d): {selectedAlert.news_count || 0}</p>
+            </div>
+
+            <div className="modal-footer">
+              Signals: {selectedAlert.signals_triggered || 0}/2 active
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MarketScanner;
