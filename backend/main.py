@@ -357,6 +357,133 @@ def get_walk_forward_analysis(ticker: str):
     )
 
 # ==========================================
+# PREDICTED BIG MOVERS
+# ==========================================
+
+ROUND_NUMBERS = [50, 100, 150, 200, 250, 300, 500]
+
+@app.get("/movers/predicted")
+async def predicted_movers():
+    """
+    Composite mover score using early_warning_score, 5-day momentum,
+    and proximity to key price levels (52-week high, round numbers).
+    """
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    # 1. Fetch existing alert scores from Supabase
+    try:
+        response = supabase.table('meme_alerts').select('ticker, alert_score').execute()
+        alert_rows = response.data or []
+    except Exception as e:
+        print(f"Supabase read error: {e}")
+        alert_rows = []
+
+    alert_map = {r["ticker"]: r.get("alert_score", 0) for r in alert_rows}
+    tickers = list(alert_map.keys())
+
+    if not tickers:
+        return []
+
+    results = []
+
+    for ticker in tickers:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period="10d")
+
+            if hist.empty or len(hist) < 2:
+                continue
+
+            close_today = float(hist["Close"].iloc[-1])
+
+            # 5-day momentum
+            if len(hist) >= 6:
+                close_5d_ago = float(hist["Close"].iloc[-6])
+            else:
+                close_5d_ago = float(hist["Close"].iloc[0])
+            momentum = (close_today - close_5d_ago) / close_5d_ago if close_5d_ago != 0 else 0.0
+
+            # 52-week high proximity
+            info = stock.info
+            week_high_52 = info.get("fiftyTwoWeekHigh", 0)
+            near_52w_high = (
+                week_high_52 > 0
+                and close_today >= week_high_52 * 0.98
+            )
+
+            # Round number proximity (within 1%)
+            near_round = False
+            for rn in ROUND_NUMBERS:
+                if abs(close_today - rn) / rn <= 0.01:
+                    near_round = True
+                    break
+
+            # Price level bonus (0–10 scale)
+            price_level_bonus = 0.0
+            if near_52w_high:
+                price_level_bonus += 6.0
+            if near_round:
+                price_level_bonus += 4.0
+
+            early_warning = alert_map.get(ticker, 0)
+
+            # Momentum scaled to 0-10 (cap at ±20% = ±10 pts)
+            momentum_score = max(min(momentum * 50, 10), -10)
+
+            mover_score = (
+                0.5 * early_warning
+                + 0.3 * momentum_score
+                + 0.2 * price_level_bonus
+            )
+
+            label = "NEUTRAL"
+            if mover_score >= 7:
+                label = "BREAKOUT"
+            elif mover_score >= 4:
+                label = "WATCH"
+
+            results.append({
+                "ticker": ticker,
+                "mover_score": round(mover_score, 2),
+                "label": label,
+                "momentum_pct": round(momentum * 100, 2),
+                "near_52w_high": near_52w_high,
+                "near_round_number": near_round,
+                "current_price": round(close_today, 2),
+                "early_warning_score": early_warning,
+            })
+
+        except Exception as e:
+            print(f"Error processing {ticker} for movers: {e}")
+            continue
+
+    results.sort(key=lambda x: x["mover_score"], reverse=True)
+
+    # Save to Supabase
+    if supabase and results:
+        try:
+            records = [
+                {
+                    "ticker": r["ticker"],
+                    "mover_score": r["mover_score"],
+                    "label": r["label"],
+                    "momentum_pct": r["momentum_pct"],
+                    "near_52w_high": r["near_52w_high"],
+                    "near_round_number": r["near_round_number"],
+                    "current_price": r["current_price"],
+                    "early_warning_score": r["early_warning_score"],
+                }
+                for r in results
+            ]
+            supabase.table('predicted_movers').upsert(records, on_conflict='ticker').execute()
+            print(f"Saved {len(records)} predicted movers to database")
+        except Exception as e:
+            print(f"predicted_movers save error: {e}")
+
+    return results
+
+# ==========================================
 # NEW MEME STOCK ALERT ENDPOINTS
 # ==========================================
 
