@@ -248,6 +248,10 @@ class MemeStockDetector:
 
             data = response.json()
             results = data.get("results", [])
+            if not results:
+                print(f"SOCIAL WARNING: ApeWisdom returned 200 but 'results' is empty or missing")
+            else:
+                print(f"ApeWisdom: fetched {len(results)} trending tickers")
             self._apewisdom_cache = results
             self._apewisdom_ts = now
             return results
@@ -266,8 +270,12 @@ class MemeStockDetector:
 
         Returns score 0-10
         """
+        HIGH_DISCUSSION = {"GME", "AMC", "TSLA", "NVDA", "AAPL", "COIN", "PLTR", "HOOD"}
         try:
             all_tickers = await self.fetch_apewisdom_data()
+
+            if not all_tickers:
+                print(f"SOCIAL WARNING: ApeWisdom returned empty data — all tickers will get social score 0")
 
             # Find this ticker in the list
             match = None
@@ -277,6 +285,12 @@ class MemeStockDetector:
                     break
 
             if not match:
+                if ticker.upper() in HIGH_DISCUSSION:
+                    print(
+                        f"SOCIAL WARNING: {ticker} not found in ApeWisdom data "
+                        f"(expected high discussion). ApeWisdom returned {len(all_tickers)} tickers. "
+                        f"Social score will be 0."
+                    )
                 return {
                     "score": 0,
                     "signal": "NO_DATA",

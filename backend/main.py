@@ -54,13 +54,19 @@ POLYMARKET_CACHE = {"timestamp": None, "data": None}
 POLYMARKET_CACHE_TTL = 600  # 10 minutes
 
 POLYMARKET_TICKER_MAP = {
-    "fed": ["SOFI", "HOOD", "COIN", "JPM", "BAC", "GS", "MS", "WFC", "C"],
-    "recession": ["SPY", "QQQ", "TLT", "GLD", "VIX"],
-    "inflation": ["TLT", "GLD", "SLV", "TIP", "COIN"],
+    "fed rate": ["SOFI", "HOOD", "COIN", "BAC", "JPM", "GS", "MS", "WFC"],
+    "interest rate": ["SOFI", "HOOD", "COIN", "BAC", "JPM", "GS", "MS", "WFC"],
+    "fed chair": ["SOFI", "HOOD", "COIN", "BAC", "JPM", "GS", "MS", "WFC"],
+    "fed decision": ["SOFI", "HOOD", "COIN", "BAC", "JPM", "GS", "MS", "WFC"],
+    "recession": ["AAPL", "MSFT", "AMZN", "GOOGL", "META", "NVDA"],
+    "crypto regulation": ["COIN", "HOOD"],
+    "crypto ban": ["COIN", "HOOD"],
+    "sec crypto": ["COIN", "HOOD"],
     "earnings": [],  # dynamically matched by ticker mention in question
-    "crypto": ["COIN", "MARA", "RIOT", "MSTR", "HOOD"],
-    "tariff": ["AAPL", "TSLA", "NKE", "CAT", "DE"],
 }
+
+# High-discussion tickers for social score diagnostics
+HIGH_DISCUSSION_TICKERS = {"GME", "AMC", "TSLA", "NVDA", "AAPL", "COIN", "PLTR", "HOOD"}
 
 CLIENT = httpx.AsyncClient(follow_redirects=True)
 
@@ -719,7 +725,8 @@ async def fetch_polymarket_events():
         return POLYMARKET_CACHE["data"] or []
 
     results = []
-    keywords = list(POLYMARKET_TICKER_MAP.keys())
+    # Sort keywords longest-first so "fed rate" matches before "fed"
+    keywords = sorted(POLYMARKET_TICKER_MAP.keys(), key=len, reverse=True)
 
     for event in raw_events:
         title = (event.get("title") or "").lower()
@@ -735,13 +742,14 @@ async def fetch_polymarket_events():
         if not matched_category:
             continue
 
-        # Determine affected tickers
+        # Determine affected tickers — only use the mapped list
         affected = list(POLYMARKET_TICKER_MAP.get(matched_category, []))
 
-        # For "earnings" or any category, also check if a known ticker symbol appears in the question
-        for ticker in STOCK_TICKERS:
-            if ticker.lower() in question_text and ticker not in affected:
-                affected.append(ticker)
+        # For "earnings" category only, dynamically match ticker mentions in the question
+        if matched_category == "earnings":
+            for ticker in STOCK_TICKERS:
+                if ticker.lower() in question_text and ticker not in affected:
+                    affected.append(ticker)
 
         if not affected:
             continue
