@@ -243,6 +243,32 @@
   color: #fff;
 }
 
+/* Market Odds Badge (Polymarket) */
+.market-odds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(138, 43, 226, 0.15);
+  border: 1px solid rgba(138, 43, 226, 0.4);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+.market-odds-badge .odds-label {
+  color: #ccc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.market-odds-badge .odds-value {
+  color: #bb86fc;
+  font-weight: 700;
+}
+
 /* Unified Signals */
 .unified-signals {
   margin-top: 15px;
@@ -419,6 +445,71 @@
 .alert-level-low {
   color: #4caf50 !important;
   font-weight: bold;
+}
+
+/* Polymarket Modal Section */
+.polymarket-event {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.polymarket-event:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.polymarket-question {
+  color: #eee;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.probability-bar-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.probability-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.probability-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #bb86fc 0%, #9c27b0 100%);
+  border-radius: 5px;
+  transition: width 0.3s ease;
+}
+
+.probability-label {
+  color: #bb86fc;
+  font-weight: 700;
+  font-size: 0.95em;
+  min-width: 40px;
+}
+
+.polymarket-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8em;
+  color: #888;
+  flex-wrap: wrap;
+}
+
+.polymarket-link {
+  color: #bb86fc;
+  text-decoration: none;
+}
+
+.polymarket-link:hover {
+  text-decoration: underline;
 }
 
 /* Watch Button */

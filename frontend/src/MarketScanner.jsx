@@ -12,6 +12,7 @@ const MarketScanner = () => {
   const [lastScanned, setLastScanned] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [polymarketEvents, setPolymarketEvents] = useState([]);
   const [watchlist, setWatchlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('foega_watchlist')) || [];
@@ -78,6 +79,13 @@ const MarketScanner = () => {
 
     fetchAlerts();
     const interval = setInterval(fetchAlerts, 5 * 60 * 1000);
+
+    // Fetch Polymarket events
+    fetch(`${API_BASE_URL}/polymarket/events`)
+      .then(res => res.json())
+      .then(events => { if (Array.isArray(events)) setPolymarketEvents(events); })
+      .catch(err => console.error('Polymarket fetch error:', err));
+
     return () => clearInterval(interval);
   }, []);
 
@@ -110,6 +118,12 @@ const MarketScanner = () => {
     if (change < -2) return 'price-down-strong';
     if (change < 0) return 'price-down';
     return 'price-neutral';
+  };
+
+  const getPolymarketOdds = (ticker) => {
+    const match = polymarketEvents.find(e => e.affected_tickers && e.affected_tickers.includes(ticker));
+    if (!match) return null;
+    return match;
   };
 
   const getSentimentEmoji = (score) => {
@@ -199,6 +213,16 @@ const MarketScanner = () => {
                   {alert.alert_level}
                 </div>
 
+                {getPolymarketOdds(alert.ticker) && (() => {
+                  const odds = getPolymarketOdds(alert.ticker);
+                  return (
+                    <div className="market-odds-badge">
+                      <span className="odds-label">{odds.question.length > 25 ? odds.question.slice(0, 25) + '…' : odds.question}</span>
+                      <span className="odds-value">{Math.round(odds.probability * 100)}%</span>
+                    </div>
+                  );
+                })()}
+
                 <div className="unified-signals">
                   <div className="signal-row">
                     <span className="signal-label">Options</span>
@@ -287,6 +311,44 @@ const MarketScanner = () => {
               <p>Sentiment: {(selectedAlert.sentiment_score || 0).toFixed(3)} {getSentimentEmoji(selectedAlert.sentiment_score || 0)}</p>
               <p>News Articles (7d): {selectedAlert.news_count || 0}</p>
             </div>
+
+            {(() => {
+              const tickerEvents = polymarketEvents.filter(
+                e => e.affected_tickers && e.affected_tickers.includes(selectedAlert.ticker)
+              );
+              if (tickerEvents.length === 0) return null;
+              return (
+                <div className="modal-section">
+                  <h3>🎯 Prediction Markets</h3>
+                  {tickerEvents.map((evt, i) => (
+                    <div key={i} className="polymarket-event">
+                      <p className="polymarket-question">{evt.question}</p>
+                      <div className="probability-bar-wrapper">
+                        <div className="probability-bar">
+                          <div className="probability-fill" style={{ width: `${Math.round(evt.probability * 100)}%` }} />
+                        </div>
+                        <span className="probability-label">{Math.round(evt.probability * 100)}%</span>
+                      </div>
+                      <div className="polymarket-meta">
+                        <span>Vol: ${evt.volume_24h ? evt.volume_24h.toLocaleString() : '0'}</span>
+                        {evt.end_date && <span>Ends: {new Date(evt.end_date).toLocaleDateString()}</span>}
+                        {evt.slug && (
+                          <a
+                            href={`https://polymarket.com/event/${evt.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="polymarket-link"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            View on Polymarket
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             <div className="modal-section">
               <h3>📈 7-Day Score History</h3>

@@ -49,6 +49,19 @@ supabase: Client = None
 CACHE = {"timestamp": None, "data": None}
 CACHE_TTL_SECONDS = 300 # Time To Live: 5 minutes (300 seconds)
 
+# --- Polymarket Caching ---
+POLYMARKET_CACHE = {"timestamp": None, "data": None}
+POLYMARKET_CACHE_TTL = 600  # 10 minutes
+
+POLYMARKET_TICKER_MAP = {
+    "fed": ["SOFI", "HOOD", "COIN", "JPM", "BAC", "GS", "MS", "WFC", "C"],
+    "recession": ["SPY", "QQQ", "TLT", "GLD", "VIX"],
+    "inflation": ["TLT", "GLD", "SLV", "TIP", "COIN"],
+    "earnings": [],  # dynamically matched by ticker mention in question
+    "crypto": ["COIN", "MARA", "RIOT", "MSTR", "HOOD"],
+    "tariff": ["AAPL", "TSLA", "NKE", "CAT", "DE"],
+}
+
 CLIENT = httpx.AsyncClient(follow_redirects=True)
 
 # --- API KEYS ---
@@ -675,6 +688,121 @@ async def get_score_history(ticker: str):
     except Exception as e:
         print(f"score_history read error for {ticker}: {e}")
         return {"error": str(e)}
+
+# ==========================================
+# POLYMARKET INTEGRATION
+# ==========================================
+
+async def fetch_polymarket_events():
+    """Fetch macro-relevant prediction market events from Polymarket's Gamma API."""
+    global POLYMARKET_CACHE
+
+    current_time = time.time()
+    if (
+        POLYMARKET_CACHE["data"] is not None
+        and (current_time - POLYMARKET_CACHE["timestamp"]) < POLYMARKET_CACHE_TTL
+    ):
+        return POLYMARKET_CACHE["data"]
+
+    url = (
+        "https://gamma-api.polymarket.com/events"
+        "?active=true&closed=false&limit=50"
+        "&order=volume24hr&ascending=false"
+    )
+
+    try:
+        response = await CLIENT.get(url, timeout=15)
+        response.raise_for_status()
+        raw_events = response.json()
+    except Exception as e:
+        print(f"Polymarket API error: {e}")
+        return POLYMARKET_CACHE["data"] or []
+
+    results = []
+    keywords = list(POLYMARKET_TICKER_MAP.keys())
+
+    for event in raw_events:
+        title = (event.get("title") or "").lower()
+        description = (event.get("description") or "").lower()
+        question_text = title + " " + description
+
+        matched_category = None
+        for kw in keywords:
+            if kw in question_text:
+                matched_category = kw
+                break
+
+        if not matched_category:
+            continue
+
+        # Determine affected tickers
+        affected = list(POLYMARKET_TICKER_MAP.get(matched_category, []))
+
+        # For "earnings" or any category, also check if a known ticker symbol appears in the question
+        for ticker in STOCK_TICKERS:
+            if ticker.lower() in question_text and ticker not in affected:
+                affected.append(ticker)
+
+        if not affected:
+            continue
+
+        # Extract probability from the first market's outcomePrices
+        markets = event.get("markets", [])
+        probability = 0.0
+        if markets and markets[0].get("outcomePrices"):
+            try:
+                prices = markets[0]["outcomePrices"]
+                if isinstance(prices, str):
+                    import json as _json
+                    prices = _json.loads(prices)
+                if isinstance(prices, list) and len(prices) > 0:
+                    probability = float(prices[0])
+            except (ValueError, IndexError, TypeError):
+                pass
+
+        volume_24h = 0.0
+        try:
+            volume_24h = float(event.get("volume24hr") or 0)
+        except (ValueError, TypeError):
+            pass
+
+        results.append({
+            "question": event.get("title", ""),
+            "probability": round(probability, 4),
+            "volume_24h": round(volume_24h, 2),
+            "end_date": event.get("endDate"),
+            "slug": event.get("slug", ""),
+            "category": matched_category,
+            "affected_tickers": affected,
+        })
+
+    # Sort by volume descending
+    results.sort(key=lambda x: x["volume_24h"], reverse=True)
+
+    POLYMARKET_CACHE["data"] = results
+    POLYMARKET_CACHE["timestamp"] = current_time
+    print(f"Polymarket: cached {len(results)} macro-relevant events")
+    return results
+
+
+def get_polymarket_odds_for_ticker(ticker: str, events: list):
+    """Return the highest-volume Polymarket event affecting a given ticker, or None."""
+    ticker = ticker.upper()
+    for event in events:
+        if ticker in event.get("affected_tickers", []):
+            return {
+                "question": event["question"],
+                "probability": event["probability"],
+            }
+    return None
+
+
+@app.get("/polymarket/events")
+async def polymarket_events():
+    """Return macro-relevant Polymarket prediction market events."""
+    events = await fetch_polymarket_events()
+    return events
+
 
 @app.on_event("shutdown")
 async def shutdown():
