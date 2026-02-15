@@ -37,7 +37,7 @@ Both servers must run simultaneously for full functionality. The frontend reads 
 
 ### Backend (backend/)
 - **main.py** — FastAPI app with all API endpoints, CORS config, Supabase integration, caching, and a background loop that refreshes data every hour
-- **meme_detector.py** — Three-signal early warning system (options flow, volume spikes, Reddit/WSB social buzz via ApeWisdom) that scores tickers 0-10 and assigns alert levels (CRITICAL/HIGH/MEDIUM/LOW). ApeWisdom data is cached for 10 minutes.
+- **meme_detector.py** — Three-signal early warning system (options flow, volume spikes, Reddit/WSB social buzz via ApeWisdom) that scores tickers 0-10 and assigns alert levels (CRITICAL/HIGH/MEDIUM/LOW). ApeWisdom data is cached for 10 minutes. Logs warnings when high-discussion tickers (GME, AMC, TSLA, NVDA, AAPL, COIN, PLTR, HOOD) return 0 social score or when ApeWisdom returns empty data.
 
 Key API endpoints:
 - `/alerts/scan` — Full 50-ticker scan (expensive, triggers API calls)
@@ -47,7 +47,7 @@ Key API endpoints:
 - `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table
 - `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
 - `/stock/{ticker}` — Single stock info via yfinance
-- `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to affected tickers via keyword matching (fed, recession, inflation, crypto, tariff). 10-minute in-memory cache.
+- `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to genuinely sensitive tickers via specific keyword phrases. 10-minute in-memory cache. Ticker mapping: fed rate/interest rate/fed chair/fed decision → SOFI, HOOD, COIN, BAC, JPM, GS, MS, WFC; recession → AAPL, MSFT, AMZN, GOOGL, META, NVDA; crypto regulation/ban/sec → COIN, HOOD; earnings → dynamically matched by ticker mention in question text only.
 
 Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
 
