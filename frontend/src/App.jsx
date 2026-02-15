@@ -1,93 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaChartLine, FaLock, FaBars, FaRocket, FaStar } from 'react-icons/fa';
+import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
 import WatchlistView from './WatchlistView';
+import HeatmapView from './HeatmapView';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
-// --- HELPER FUNCTIONS ---
-const getHypeClass = (score) => {
-    if (score > 1.0) return 'ticker-card hype-positive-strong';
-    if (score > 0.3) return 'ticker-card hype-positive';
-    if (score < -1.0) return 'ticker-card hype-negative-strong';
-    if (score < -0.3) return 'ticker-card hype-negative';
-    return 'ticker-card hype-neutral';
-};
-
-// --- COMPONENT: PremiumAnalysisView ---
-const PremiumAnalysisView = ({ data }) => {
-    const [selectedTicker, setSelectedTicker] = useState(data.length > 0 ? data[0].ticker : null);
-    const [analysisData, setAnalysisData] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        if (!selectedTicker) return;
-        const fetchAnalysis = async () => {
-            setLoading(true);
-            try {
-                const response = await fetch(`${API_BASE_URL}/premium/walk_forward/${selectedTicker}`);
-                const result = await response.json();
-                setAnalysisData(result);
-            } catch (e) { setError(e.message); }
-            finally { setLoading(false); }
-        };
-        fetchAnalysis();
-    }, [selectedTicker]);
-
-    if (data.length === 0) return <div className="content-area premium-page"><p>No trending tickers loaded. Check dashboard data.</p></div>;
-
-    return (
-        <div className="content-area premium-page">
-            <h2>💎 Walk-Forward Trader Bot Analysis</h2>
-            <p className="premium-intro">Select a ticker to view proprietary backtesting results, optimal strategy parameters, and performance metrics.</p>
-            <div className="ticker-selector-wrapper">
-                <label htmlFor="ticker-select">Select Ticker:</label>
-                <select id="ticker-select" value={selectedTicker || ''} onChange={e => setSelectedTicker(e.target.value)}>
-                    {data.map(item => <option key={item.ticker} value={item.ticker}>{item.ticker}</option>)}
-                </select>
-            </div>
-            {loading && <h3 className="loading-message">Running Walk-Forward Simulation... (This may take a few seconds)</h3>}
-            {analysisData && (
-                <div className="analysis-results">
-                    <h3>Analysis for **{analysisData.ticker}**</h3>
-                    <div className="analysis-section">
-                        <h4>Optimal Strategy Parameters</h4>
-                        <div className="param-grid">
-                            {Object.entries(analysisData.optimal_params).map(([key, value]) => (
-                                <div key={key} className="param-item"><span className="param-label">{key}:</span> <span className="param-value">{value}</span></div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="analysis-section">
-                        <h4>Performance Metrics</h4>
-                        <div className="param-grid">
-                            {Object.entries(analysisData.performance_metrics).map(([key, value]) => (
-                                <div key={key} className="param-item"><span className="param-label">{key}:</span> <span className="param-value">{value}</span></div>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="analysis-section">
-                        <h4>Walk-Forward Trading Periods</h4>
-                        <div className="trading-periods">
-                            {analysisData.trading_periods.map((period, index) => (
-                                <div key={index} className="period-card">
-                                    <strong>{period.period}</strong>: {period.start_date} → {period.end_date} <br />
-                                    <span className={period.return >= 0 ? 'positive-return' : 'negative-return'}>
-                                        Return: {(period.return * 100).toFixed(2)}%
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-            {error && <p className="error-message">Error: {error}</p>}
+// --- COMPONENT: PremiumComingSoon ---
+const PremiumComingSoon = () => (
+    <div className="content-area premium-page">
+        <h2>Premium Analysis</h2>
+        <div className="coming-soon-card">
+            <FaLock size={48} color="#444" />
+            <h3>Coming Soon</h3>
+            <p>Walk-forward backtesting, optimal strategy parameters, and AI-driven trade signals are under development.</p>
         </div>
-    );
-};
+    </div>
+);
 
 // --- COMPONENT: TickerDetailModal ---
 const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, setModalError, polymarketEvents }) => {
@@ -165,9 +96,6 @@ const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, 
 export default function App() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [currentView, setCurrentView] = useState('landing');
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [modalData, setModalData] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
@@ -179,15 +107,6 @@ export default function App() {
             .then(res => res.json())
             .then(events => { if (Array.isArray(events)) setPolymarketEvents(events); })
             .catch(err => console.error('Polymarket fetch error:', err));
-    }, []);
-
-    // Fetch data for Premium Analysis (still uses old endpoint for now)
-    useEffect(() => {
-        fetch(`${API_BASE_URL}/trending/cached_hype`)
-            .then(res => res.json())
-            .then(res => { if (res.error) throw new Error(res.error); setData(res); })
-            .catch(() => setError("Failed to load data from backend."))
-            .finally(() => setLoading(false));
     }, []);
 
     const fetchTickerDetails = async (ticker) => {
@@ -220,8 +139,10 @@ export default function App() {
                 return <PredictedMovers />;
             case 'watchlist':
                 return <WatchlistView />;
+            case 'heatmap':
+                return <HeatmapView />;
             case 'premium':
-                return <PremiumAnalysisView data={data} />;
+                return <PremiumComingSoon />;
             default:
                 return null;
         }
@@ -245,6 +166,10 @@ export default function App() {
                         <div className={`nav-item ${currentView === 'movers' ? 'active' : ''}`}
                              onClick={() => setCurrentView('movers')}>
                             <FaRocket /> <span>Predicted Movers</span>
+                        </div>
+                        <div className={`nav-item ${currentView === 'heatmap' ? 'active' : ''}`}
+                             onClick={() => setCurrentView('heatmap')}>
+                            <FaTh /> <span>Heatmap</span>
                         </div>
                         <div className={`nav-item ${currentView === 'watchlist' ? 'active' : ''}`}
                              onClick={() => setCurrentView('watchlist')}>
