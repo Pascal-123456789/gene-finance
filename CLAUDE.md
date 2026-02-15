@@ -32,6 +32,7 @@ Both servers must run simultaneously for full functionality. The frontend reads 
 - `SUPABASE_URL` / `SUPABASE_KEY` — Supabase project credentials
 - `FINNHUB_API_KEY` — News sentiment data
 - `FRONTEND_URL` — Optional, for CORS in production
+- `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` — Optional, for email alerts on CRITICAL tickers
 
 ## Architecture
 
@@ -45,17 +46,19 @@ Key API endpoints:
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
 - `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table
-- `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
+- `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub); frontend shows Coming Soon placeholder instead of calling this
 - `/stock/{ticker}` — Single stock info via yfinance
+- `POST /subscribe` — Upserts email + tickers array into `alert_subscriptions` table for CRITICAL-level email alerts
 - `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to genuinely sensitive tickers via specific keyword phrases. 10-minute in-memory cache. Ticker mapping: fed rate/interest rate/fed chair/fed decision → SOFI, HOOD, COIN, BAC, JPM, GS, MS, WFC; recession → AAPL, MSFT, AMZN, GOOGL, META, NVDA; crypto regulation/ban/sec → COIN, HOOD; earnings → dynamically matched by ticker mention in question text only.
 
-Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
+Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays. After each scan, `send_critical_alert_emails()` sends SMTP emails to subscribed users for any CRITICAL-level tickers.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/watchlist/premium), and ticker detail modal (includes Polymarket prediction market section)
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/heatmap/watchlist/premium), ticker detail modal (includes Polymarket section), and Coming Soon premium placeholder
 - **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, Polymarket odds badge on matching cards, and Watch button per card
+- **HeatmapView.jsx** — Market heatmap grid of ticker tiles colored by alert level (red=CRITICAL, orange=HIGH, yellow=MEDIUM, grey=LOW) with tile size proportional to mover_score. Shows ticker symbol and price change %
 - **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
-- **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button
+- **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button and email alert subscription form
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
 
 State management is local React hooks only (useState/useEffect). No router library — views are toggled via state.
@@ -64,6 +67,7 @@ State management is local React hooks only (useState/useEffect). No router libra
 - **ticker_hype** — Stores hype scores per ticker
 - **meme_alerts** — Stores alert scores, levels, and signal breakdowns per ticker
 - **predicted_movers** — Stores mover scores, labels, momentum, and price level flags per ticker
+- **alert_subscriptions** — Email alert subscriptions with email (unique), tickers array, and created_at timestamp (migration: `003_email_alerts.sql`)
 
 ### Styling
 Dark theme with green (#00ff84) and amber (#ff9900) accents. CSS files are colocated with their components. Sidebar collapses from 250px to 70px.
