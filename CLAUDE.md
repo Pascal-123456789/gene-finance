@@ -47,12 +47,13 @@ Key API endpoints:
 - `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table
 - `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub)
 - `/stock/{ticker}` — Single stock info via yfinance
+- `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to affected tickers via keyword matching (fed, recession, inflation, crypto, tariff). 10-minute in-memory cache.
 
-Caching: 5-minute in-memory TTL for expensive endpoints; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
+Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/watchlist/premium), and ticker detail modal
-- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, and Watch button per card
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/watchlist/premium), and ticker detail modal (includes Polymarket prediction market section)
+- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, Polymarket odds badge on matching cards, and Watch button per card
 - **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
 - **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
@@ -72,4 +73,4 @@ Dark theme with green (#00ff84) and amber (#ff9900) accents. CSS files are coloc
 - No test suite or testing framework configured
 - No CI/CD pipelines
 - Alert scoring weights: 40% options + 35% volume + 25% social (Reddit/WSB via ApeWisdom)
-- Data sources: yfinance (free, no key), Finnhub (free tier with rate limits), ApeWisdom (free, no key)
+- Data sources: yfinance (free, no key), Finnhub (free tier with rate limits), ApeWisdom (free, no key), Polymarket Gamma API (free, no key)
