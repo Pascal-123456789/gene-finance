@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaLock, FaBars, FaRocket, FaStar } from 'react-icons/fa';
+import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
 import WatchlistView from './WatchlistView';
+import HeatmapView from './HeatmapView';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
@@ -138,6 +139,8 @@ export default function App() {
                 return <PredictedMovers />;
             case 'watchlist':
                 return <WatchlistView />;
+            case 'heatmap':
+                return <HeatmapView />;
             case 'premium':
                 return <PremiumComingSoon />;
             default:
@@ -163,6 +166,10 @@ export default function App() {
                         <div className={`nav-item ${currentView === 'movers' ? 'active' : ''}`}
                              onClick={() => setCurrentView('movers')}>
                             <FaRocket /> <span>Predicted Movers</span>
+                        </div>
+                        <div className={`nav-item ${currentView === 'heatmap' ? 'active' : ''}`}
+                             onClick={() => setCurrentView('heatmap')}>
+                            <FaTh /> <span>Heatmap</span>
                         </div>
                         <div className={`nav-item ${currentView === 'watchlist' ? 'active' : ''}`}
                              onClick={() => setCurrentView('watchlist')}>
