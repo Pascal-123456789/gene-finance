@@ -531,6 +531,88 @@ body {
 
 
 /* --------------------------------- */
+/* Polymarket Modal Section */
+/* --------------------------------- */
+.polymarket-modal-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(138, 43, 226, 0.08);
+    border: 1px solid rgba(138, 43, 226, 0.3);
+    border-radius: 10px;
+}
+
+.polymarket-modal-section h3 {
+    color: #bb86fc;
+    margin: 0 0 12px 0;
+    font-size: 1.1em;
+}
+
+.polymarket-modal-event {
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.polymarket-modal-event:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.polymarket-modal-question {
+    color: #eee;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    font-size: 0.95em;
+}
+
+.polymarket-modal-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.polymarket-modal-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.polymarket-modal-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #bb86fc 0%, #9c27b0 100%);
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.polymarket-modal-pct {
+    color: #bb86fc;
+    font-weight: 700;
+    font-size: 0.95em;
+    min-width: 40px;
+}
+
+.polymarket-modal-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 0.8em;
+    color: #888;
+    flex-wrap: wrap;
+}
+
+.polymarket-modal-link {
+    color: #bb86fc;
+    text-decoration: none;
+}
+
+.polymarket-modal-link:hover {
+    text-decoration: underline;
+}
+
+/* --------------------------------- */
 /* Premium Analysis View Styles */
 /* --------------------------------- */
 .premium-intro {

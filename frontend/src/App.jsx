@@ -90,7 +90,7 @@ const PremiumAnalysisView = ({ data }) => {
 };
 
 // --- COMPONENT: TickerDetailModal ---
-const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, setModalError }) => {
+const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, setModalError, polymarketEvents }) => {
     if (!modalData && !modalLoading && !modalError) return null;
 
     return (
@@ -109,6 +109,51 @@ const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, 
                         </div>
                         <p className="modal-summary-title">Business Summary:</p>
                         <p className="modal-summary-text">{modalData.summary || 'No summary available.'}</p>
+
+                        {(() => {
+                            const events = (polymarketEvents || []).filter(
+                                e => e.affected_tickers && e.affected_tickers.includes(modalData.ticker)
+                            );
+                            if (events.length === 0) return null;
+                            return (
+                                <div className="polymarket-modal-section">
+                                    <h3>Prediction Markets</h3>
+                                    {events.map((evt, i) => (
+                                        <div key={i} className="polymarket-modal-event">
+                                            <p className="polymarket-modal-question">{evt.question}</p>
+                                            <div className="polymarket-modal-bar-wrapper">
+                                                <div className="polymarket-modal-bar">
+                                                    <div
+                                                        className="polymarket-modal-bar-fill"
+                                                        style={{ width: `${Math.round(evt.probability * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <span className="polymarket-modal-pct">
+                                                    {Math.round(evt.probability * 100)}%
+                                                </span>
+                                            </div>
+                                            <div className="polymarket-modal-meta">
+                                                <span>24h Vol: ${evt.volume_24h ? evt.volume_24h.toLocaleString() : '0'}</span>
+                                                {evt.end_date && (
+                                                    <span>Ends: {new Date(evt.end_date).toLocaleDateString()}</span>
+                                                )}
+                                                {evt.slug && (
+                                                    <a
+                                                        href={`https://polymarket.com/event/${evt.slug}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="polymarket-modal-link"
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        View on Polymarket
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </>
                 )}
             </div>
@@ -126,6 +171,16 @@ export default function App() {
     const [modalData, setModalData] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
+    const [polymarketEvents, setPolymarketEvents] = useState([]);
+
+    // Fetch Polymarket events
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/polymarket/events`)
+            .then(res => res.json())
+            .then(events => { if (Array.isArray(events)) setPolymarketEvents(events); })
+            .catch(err => console.error('Polymarket fetch error:', err));
+    }, []);
+
     // Fetch data for Premium Analysis (still uses old endpoint for now)
     useEffect(() => {
         fetch(`${API_BASE_URL}/trending/cached_hype`)
@@ -219,6 +274,7 @@ export default function App() {
                 modalError={modalError}
                 setModalData={setModalData}
                 setModalError={setModalError}
+                polymarketEvents={polymarketEvents}
             />
         </div>
     );
