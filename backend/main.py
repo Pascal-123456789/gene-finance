@@ -4,8 +4,10 @@ import httpx
 import numpy as np
 import yfinance as yf
 import time
+import smtplib
+from email.mime.text import MIMEText
 from datetime import date, timedelta
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, Optional
 from pydantic import BaseModel
 from meme_detector import MemeStockDetector
 
@@ -72,6 +74,13 @@ CLIENT = httpx.AsyncClient(follow_redirects=True)
 
 # --- API KEYS ---
 FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
+
+# --- SMTP CONFIG ---
+SMTP_HOST = os.getenv("SMTP_HOST")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER")
+SMTP_PASS = os.getenv("SMTP_PASS")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "")
 
 # --- RATE LIMIT & DATE ---
 FINNHUB_CALL_DELAY = 0.5 # Delay increased to respect Finnhub limits
@@ -616,6 +625,11 @@ async def scan_for_alerts():
             response = supabase.table('meme_alerts').upsert(records, on_conflict='ticker').execute()
             print(f"Saved {len(records)} unified alerts to database")
 
+            # Send email alerts for CRITICAL tickers
+            critical_tickers = [r["ticker"] for r in records if r.get("alert_level") == "CRITICAL"]
+            if critical_tickers:
+                send_critical_alert_emails(critical_tickers)
+
         except Exception as e:
             print(f"Database save error: {e}")
 
@@ -810,6 +824,80 @@ async def polymarket_events():
     """Return macro-relevant Polymarket prediction market events."""
     events = await fetch_polymarket_events()
     return events
+
+
+# ==========================================
+# EMAIL ALERT SUBSCRIPTIONS
+# ==========================================
+
+class SubscribeRequest(BaseModel):
+    email: str
+    tickers: List[str]
+
+@app.post("/subscribe")
+async def subscribe(req: SubscribeRequest):
+    """Subscribe an email to alerts for specific tickers."""
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    tickers_upper = [t.upper() for t in req.tickers]
+    try:
+        response = (
+            supabase.table('alert_subscriptions')
+            .upsert(
+                {"email": req.email, "tickers": tickers_upper},
+                on_conflict="email",
+            )
+            .execute()
+        )
+        return {"status": "subscribed", "email": req.email, "tickers": tickers_upper}
+    except Exception as e:
+        print(f"Subscribe error: {e}")
+        return {"error": str(e)}
+
+
+def send_critical_alert_emails(critical_tickers: List[str]):
+    """Send email alerts for tickers that hit CRITICAL level."""
+    if not supabase or not SMTP_HOST:
+        return
+
+    if not critical_tickers:
+        return
+
+    try:
+        response = supabase.table('alert_subscriptions').select('email, tickers').execute()
+        subscriptions = response.data or []
+    except Exception as e:
+        print(f"Email alert query error: {e}")
+        return
+
+    for sub in subscriptions:
+        matching = [t for t in critical_tickers if t in sub.get("tickers", [])]
+        if not matching:
+            continue
+
+        ticker_list = ", ".join(matching)
+        body = (
+            f"CRITICAL alert triggered for: {ticker_list}\n\n"
+            f"These tickers in your watchlist have hit CRITICAL alert level, "
+            f"indicating unusual options flow, volume spikes, or social buzz.\n\n"
+            f"Check the Foega Market Scanner for details."
+        )
+
+        msg = MIMEText(body)
+        msg["Subject"] = f"Foega Alert: {ticker_list} hit CRITICAL"
+        msg["From"] = SMTP_FROM
+        msg["To"] = sub["email"]
+
+        try:
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                server.starttls()
+                if SMTP_USER and SMTP_PASS:
+                    server.login(SMTP_USER, SMTP_PASS)
+                server.send_message(msg)
+            print(f"Alert email sent to {sub['email']} for {ticker_list}")
+        except Exception as e:
+            print(f"SMTP error sending to {sub['email']}: {e}")
 
 
 @app.on_event("shutdown")

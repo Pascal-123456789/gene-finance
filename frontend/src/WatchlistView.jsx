@@ -35,6 +35,29 @@ const WatchlistView = () => {
     localStorage.setItem(WATCHLIST_KEY, JSON.stringify(updated));
   };
 
+  const [email, setEmail] = useState('');
+  const [subscribeStatus, setSubscribeStatus] = useState(null);
+
+  const handleSubscribe = async () => {
+    if (!email || watchlist.length === 0) return;
+    setSubscribeStatus('loading');
+    try {
+      const res = await fetch(`${API_BASE_URL}/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, tickers: watchlist }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setSubscribeStatus('error');
+      } else {
+        setSubscribeStatus('success');
+      }
+    } catch {
+      setSubscribeStatus('error');
+    }
+  };
+
   const watchedAlerts = alerts.filter(a => watchlist.includes(a.ticker));
 
   const getAlertClass = (level) => {
@@ -144,6 +167,33 @@ const WatchlistView = () => {
           <footer className="dashboard-footer">
             Watching {watchedAlerts.length} of {watchlist.length} tickers.
           </footer>
+
+          <div className="email-subscribe-section">
+            <h3>Get email alerts for your watchlist</h3>
+            <p>Receive an email when any of your watched tickers hits CRITICAL alert level.</p>
+            <div className="subscribe-form">
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setSubscribeStatus(null); }}
+                className="subscribe-input"
+              />
+              <button
+                onClick={handleSubscribe}
+                disabled={!email || subscribeStatus === 'loading'}
+                className="subscribe-btn"
+              >
+                {subscribeStatus === 'loading' ? 'Subscribing...' : 'Subscribe'}
+              </button>
+            </div>
+            {subscribeStatus === 'success' && (
+              <p className="subscribe-msg success">Subscribed! You'll get alerts for {watchlist.length} ticker(s).</p>
+            )}
+            {subscribeStatus === 'error' && (
+              <p className="subscribe-msg error">Failed to subscribe. Please try again.</p>
+            )}
+          </div>
         </>
       )}
     </div>
