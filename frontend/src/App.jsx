@@ -140,7 +140,7 @@ export default function App() {
             case 'watchlist':
                 return <WatchlistView />;
             case 'heatmap':
-                return <HeatmapView />;
+                return <HeatmapView onTickerClick={fetchTickerDetails} />;
             case 'premium':
                 return <PremiumComingSoon />;
             default:
