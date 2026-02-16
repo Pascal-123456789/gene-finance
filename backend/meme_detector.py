@@ -251,7 +251,8 @@ class MemeStockDetector:
             if not results:
                 print(f"SOCIAL WARNING: ApeWisdom returned 200 but 'results' is empty or missing")
             else:
-                print(f"ApeWisdom: fetched {len(results)} trending tickers")
+                top_tickers = [r.get("ticker", "?") for r in results[:20]]
+                print(f"ApeWisdom: fetched {len(results)} trending tickers. Top 20: {top_tickers}")
             self._apewisdom_cache = results
             self._apewisdom_ts = now
             return results
@@ -277,19 +278,33 @@ class MemeStockDetector:
             if not all_tickers:
                 print(f"SOCIAL WARNING: ApeWisdom returned empty data — all tickers will get social score 0")
 
-            # Find this ticker in the list
+            # Find this ticker in the list — exact match first
             match = None
             for item in all_tickers:
                 if item.get("ticker", "").upper() == ticker.upper():
                     match = item
                     break
 
+            # Fallback: check if ticker appears in the 'name' field
+            if not match:
+                ticker_lower = ticker.lower()
+                for item in all_tickers:
+                    name = item.get("name", "").lower()
+                    if ticker_lower in name:
+                        match = item
+                        print(
+                            f"SOCIAL FALLBACK: {ticker} matched via name field "
+                            f"'{item.get('name')}' (ApeWisdom ticker: {item.get('ticker')})"
+                        )
+                        break
+
             if not match:
                 if ticker.upper() in HIGH_DISCUSSION:
+                    top_10 = [f"{r.get('ticker')}({r.get('mentions', 0)})" for r in all_tickers[:10]]
                     print(
                         f"SOCIAL WARNING: {ticker} not found in ApeWisdom data "
-                        f"(expected high discussion). ApeWisdom returned {len(all_tickers)} tickers. "
-                        f"Social score will be 0."
+                        f"(expected high discussion). {len(all_tickers)} tickers available. "
+                        f"Top 10: {top_10}. Social score will be 0."
                     )
                 return {
                     "score": 0,

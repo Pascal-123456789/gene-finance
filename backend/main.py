@@ -67,8 +67,6 @@ POLYMARKET_TICKER_MAP = {
     "earnings": [],  # dynamically matched by ticker mention in question
 }
 
-# High-discussion tickers for social score diagnostics
-HIGH_DISCUSSION_TICKERS = {"GME", "AMC", "TSLA", "NVDA", "AAPL", "COIN", "PLTR", "HOOD"}
 
 CLIENT = httpx.AsyncClient(follow_redirects=True)
 
