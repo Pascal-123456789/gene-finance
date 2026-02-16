@@ -128,8 +128,9 @@ async def scheduled_update_loop():
     while True:
         try:
             print("AUTO-UPDATE: Starting background fetch...")
-            # This calls your existing logic
             await trending_hype()
+            print("AUTO-UPDATE: Hype data updated. Now updating predicted movers...")
+            await predicted_movers()
             print("AUTO-UPDATE: Success. Sleeping for 1 hour.")
         except Exception as e:
             print(f"AUTO-UPDATE ERROR: {e}")
@@ -527,6 +528,28 @@ async def predicted_movers():
             print(f"predicted_movers save error: {e}")
 
     return results
+
+
+@app.get("/movers/cached")
+async def get_cached_movers():
+    """Get predicted movers from database (fast)"""
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    try:
+        response = supabase.table('predicted_movers').select('*').execute()
+        results = response.data
+
+        if not results:
+            return []
+
+        results_sorted = sorted(results, key=lambda x: x.get('mover_score', 0), reverse=True)
+        return results_sorted
+
+    except Exception as e:
+        print(f"predicted_movers read error: {e}")
+        return {"error": str(e)}
+
 
 # ==========================================
 # NEW MEME STOCK ALERT ENDPOINTS

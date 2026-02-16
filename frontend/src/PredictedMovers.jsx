@@ -11,7 +11,7 @@ const PredictedMovers = () => {
   useEffect(() => {
     const fetchMovers = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/movers/predicted`);
+        const response = await fetch(`${API_BASE_URL}/movers/cached`);
         const data = await response.json();
 
         if (data.error || !Array.isArray(data)) {

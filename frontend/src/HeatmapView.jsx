@@ -19,7 +19,7 @@ const HeatmapView = () => {
       try {
         const [alertsRes, moversRes] = await Promise.all([
           fetch(`${API_BASE_URL}/alerts/cached`),
-          fetch(`${API_BASE_URL}/movers/predicted`),
+          fetch(`${API_BASE_URL}/movers/cached`),
         ]);
         const alerts = await alertsRes.json();
         const movers = await moversRes.json();
