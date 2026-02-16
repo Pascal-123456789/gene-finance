@@ -575,13 +575,13 @@ async def scan_for_alerts():
         "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
         
         # === FINTECH & PAYMENTS (7) ===
-        "V", "MA", "PYPL", "SQ", "COIN", "HOOD", "SOFI",
+        "V", "MA", "PYPL", "XYZ", "COIN", "HOOD", "SOFI",
         
         # === MEME STOCKS (5) ===
         "GME", "AMC", "PLTR", "SNAP", "RBLX",
         
         # === GROWTH TECH (6) ===
-        "UBER", "LYFT", "AIRBNB", "DASH", "SPOT", "ZM",
+        "UBER", "LYFT", "ABNB", "DASH", "SPOT", "ZM",
         
         # === FINANCE (5) ===
         "JPM", "BAC", "GS", "MS", "WFC",
