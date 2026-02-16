@@ -67,8 +67,6 @@ POLYMARKET_TICKER_MAP = {
     "earnings": [],  # dynamically matched by ticker mention in question
 }
 
-# High-discussion tickers for social score diagnostics
-HIGH_DISCUSSION_TICKERS = {"GME", "AMC", "TSLA", "NVDA", "AAPL", "COIN", "PLTR", "HOOD"}
 
 CLIENT = httpx.AsyncClient(follow_redirects=True)
 
@@ -130,8 +128,9 @@ async def scheduled_update_loop():
     while True:
         try:
             print("AUTO-UPDATE: Starting background fetch...")
-            # This calls your existing logic
             await trending_hype()
+            print("AUTO-UPDATE: Hype data updated. Now updating predicted movers...")
+            await predicted_movers()
             print("AUTO-UPDATE: Success. Sleeping for 1 hour.")
         except Exception as e:
             print(f"AUTO-UPDATE ERROR: {e}")
@@ -530,6 +529,28 @@ async def predicted_movers():
 
     return results
 
+
+@app.get("/movers/cached")
+async def get_cached_movers():
+    """Get predicted movers from database (fast)"""
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    try:
+        response = supabase.table('predicted_movers').select('*').execute()
+        results = response.data
+
+        if not results:
+            return []
+
+        results_sorted = sorted(results, key=lambda x: x.get('mover_score', 0), reverse=True)
+        return results_sorted
+
+    except Exception as e:
+        print(f"predicted_movers read error: {e}")
+        return {"error": str(e)}
+
+
 # ==========================================
 # NEW MEME STOCK ALERT ENDPOINTS
 # ==========================================
@@ -554,13 +575,13 @@ async def scan_for_alerts():
         "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
         
         # === FINTECH & PAYMENTS (7) ===
-        "V", "MA", "PYPL", "SQ", "COIN", "HOOD", "SOFI",
+        "V", "MA", "PYPL", "XYZ", "COIN", "HOOD", "SOFI",
         
         # === MEME STOCKS (5) ===
         "GME", "AMC", "PLTR", "SNAP", "RBLX",
         
         # === GROWTH TECH (6) ===
-        "UBER", "LYFT", "AIRBNB", "DASH", "SPOT", "ZM",
+        "UBER", "LYFT", "ABNB", "DASH", "SPOT", "ZM",
         
         # === FINANCE (5) ===
         "JPM", "BAC", "GS", "MS", "WFC",
