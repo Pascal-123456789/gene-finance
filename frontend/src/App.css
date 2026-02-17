@@ -862,13 +862,15 @@ body {
     background: #1e1e1e;
     border: 2px solid #444;
     color: var(--foega-primary-color);
-    font-size: 1.4rem;
+    font-size: 1.5rem;
+    font-weight: 800;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.2s, border-color 0.2s, transform 0.2s;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    font-family: inherit;
 }
 
 .help-fab:hover {
@@ -881,10 +883,13 @@ body {
 /* Help Modal */
 /* --------------------------------- */
 .help-modal {
-    max-width: 640px;
+    width: 92%;
+    min-width: 600px;
+    max-width: 720px;
     max-height: 85vh;
     overflow-y: auto;
     text-align: left;
+    padding: 36px 40px;
 }
 
 .help-intro {

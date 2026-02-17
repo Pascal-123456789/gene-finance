@@ -128,19 +128,21 @@ async def startup_event():
     
 async def scheduled_update_loop():
     """
-    This runs forever in the background. 
+    This runs forever in the background.
     On AWS, it ensures the database stays fresh even if no one visits the site.
     """
     while True:
         try:
-            print("AUTO-UPDATE: Starting background fetch...")
+            print("AUTO-UPDATE: Starting alert scan...")
+            await scan_for_alerts()
+            print("AUTO-UPDATE: Alert scan complete. Starting hype fetch...")
             await trending_hype()
             print("AUTO-UPDATE: Hype data updated. Now updating predicted movers...")
             await predicted_movers()
             print("AUTO-UPDATE: Success. Sleeping for 1 hour.")
         except Exception as e:
             print(f"AUTO-UPDATE ERROR: {e}")
-        
+
         # Wait for 1 hour (3600 seconds)
         await asyncio.sleep(3600)
         
@@ -608,10 +610,11 @@ async def scan_for_alerts():
     results = await detector.scan_watchlist(watchlist)
     
     # ADD: Sentiment + Price for each ticker
+    finnhub_errors = 0
     for item in results:
         ticker = item["ticker"]
-        
-        # Add sentiment
+
+        # Add sentiment (with rate-limit tracking)
         try:
             sentiment_data = await async_news_sentiment_and_volume(ticker)
             item["sentiment_score"] = sentiment_data.get("social_raw", 0.0)
@@ -619,22 +622,32 @@ async def scan_for_alerts():
         except Exception as e:
             item["sentiment_score"] = 0.0
             item["news_count"] = 0
-        
+            finnhub_errors += 1
+
         # Add price
         try:
             stock = yf.Ticker(ticker)
             info = stock.info
-            item["current_price"] = info.get("regularMarketPrice", 0)
-            item["price_change_pct"] = info.get("regularMarketChangePercent", 0)
+            item["current_price"] = info.get("regularMarketPrice", 0) or 0
+            item["price_change_pct"] = info.get("regularMarketChangePercent", 0) or 0
         except Exception as e:
+            print(f"yfinance error for {ticker}: {e}")
             item["current_price"] = 0
             item["price_change_pct"] = 0
-    
-    # Save to Supabase
+
+    if finnhub_errors > 0:
+        print(f"WARNING: {finnhub_errors}/{len(results)} Finnhub calls failed (likely rate-limited)")
+
+    # Save to Supabase — skip tickers with $0 price (bad data)
     if supabase:
         try:
             records = []
+            skipped = []
             for item in results:
+                price = item.get("current_price", 0) or 0
+                if price <= 0:
+                    skipped.append(item["ticker"])
+                    continue
                 records.append({
                     "ticker": item["ticker"],
                     "alert_score": item["early_warning_score"],
@@ -645,12 +658,15 @@ async def scan_for_alerts():
                     "social_score": item["social_signal"]["score"],
                     "sentiment_score": item.get("sentiment_score", 0),
                     "news_count": item.get("news_count", 0),
-                    "current_price": item.get("current_price", 0),
+                    "current_price": price,
                     "price_change_pct": item.get("price_change_pct", 0),
                 })
-            
+
+            if skipped:
+                print(f"WARNING: Skipped {len(skipped)} tickers with $0 price: {skipped}")
+
             response = supabase.table('meme_alerts').upsert(records, on_conflict='ticker').execute()
-            print(f"Saved {len(records)} unified alerts to database")
+            print(f"Saved {len(records)} unified alerts to database (skipped {len(skipped)} with bad price)")
 
             # Send email alerts for CRITICAL tickers
             critical_tickers = [r["ticker"] for r in records if r.get("alert_level") == "CRITICAL"]
@@ -977,6 +993,33 @@ async def debug_social():
         "our_name_fallback_matches": name_matches,
         "our_tickers_missing": sorted(our_tickers - set(exact_matches.keys()) - set(name_matches.keys())),
     }
+
+
+@app.get("/debug/scan-status")
+async def debug_scan_status():
+    """Debug endpoint: show how many tickers in Supabase, last updated, and which have price=0."""
+    if not supabase:
+        return {"error": "Database not configured"}
+
+    try:
+        response = supabase.table('meme_alerts').select('ticker,current_price,updated_at,alert_score').execute()
+        rows = response.data or []
+
+        zero_price = [r["ticker"] for r in rows if not r.get("current_price") or r["current_price"] <= 0]
+        timestamps = [r["updated_at"] for r in rows if r.get("updated_at")]
+        latest = max(timestamps) if timestamps else None
+        oldest = min(timestamps) if timestamps else None
+
+        return {
+            "total_tickers_in_db": len(rows),
+            "last_updated": latest,
+            "oldest_updated": oldest,
+            "zero_price_tickers": sorted(zero_price),
+            "zero_price_count": len(zero_price),
+            "all_tickers": sorted([r["ticker"] for r in rows]),
+        }
+    except Exception as e:
+        return {"error": str(e)}
 
 
 @app.on_event("shutdown")
