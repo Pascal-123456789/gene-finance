@@ -57,23 +57,31 @@ Object.entries(SECTOR_MAP).forEach(([sector, tickers]) => {
   tickers.forEach(t => { TICKER_INFO[t.ticker] = { name: t.name, sector }; });
 });
 
-function getPriceColor(pct) {
-  // Clamp to [-5, 5] for color mapping
-  const clamped = Math.max(-5, Math.min(5, pct));
-  if (clamped >= 0) {
-    // 0 → dark grey, +5 → deep green
-    const t = clamped / 5;
-    const h = 140;
-    const s = Math.round(t * 70);
-    const l = 18 + Math.round(t * 10);
-    return `hsl(${h}, ${s}%, ${l}%)`;
-  } else {
-    // 0 → dark grey, -5 → deep red
-    const t = Math.abs(clamped) / 5;
-    const h = 0;
-    const s = Math.round(t * 70);
-    const l = 18 + Math.round(t * 10);
-    return `hsl(${h}, ${s}%, ${l}%)`;
+function getSignalColor(moverScore) {
+  // Background gradient based on mover_score (0-10)
+  // 0 → dark grey, 10 → bright teal/green (our signal color)
+  const clamped = Math.max(0, Math.min(10, moverScore));
+  const t = clamped / 10;
+  const h = 160; // teal-green
+  const s = Math.round(t * 65);
+  const l = 16 + Math.round(t * 12);
+  return `hsl(${h}, ${s}%, ${l}%)`;
+}
+
+function getAlertBorder(alertLevel) {
+  switch (alertLevel) {
+    case 'CRITICAL': return '2px solid #ff3333';
+    case 'HIGH': return '2px solid #ff9900';
+    case 'MEDIUM': return '1px solid rgba(255, 255, 255, 0.15)';
+    default: return '1px solid rgba(255, 255, 255, 0.06)';
+  }
+}
+
+function getAlertClass(alertLevel) {
+  switch (alertLevel) {
+    case 'CRITICAL': return 'alert-critical';
+    case 'HIGH': return 'alert-high';
+    default: return '';
   }
 }
 
@@ -129,11 +137,15 @@ const HeatmapView = ({ onTickerClick }) => {
     <div className="content-area heatmap-view">
       <div className="heatmap-header">
         <h1 className="heatmap-title">Market Heatmap</h1>
-        <p className="heatmap-subtitle">50 tickers grouped by sector. Color = daily price change.</p>
+        <p className="heatmap-subtitle">Color & size = Foega signal strength. Price change shown inside.</p>
         <div className="heatmap-legend-bar">
-          <span className="legend-label">-5%+</span>
+          <span className="legend-label">Low signal</span>
           <div className="legend-gradient" />
-          <span className="legend-label">+5%+</span>
+          <span className="legend-label">High signal</span>
+        </div>
+        <div className="heatmap-legend-alerts">
+          <span className="legend-alert-item critical-border">CRITICAL</span>
+          <span className="legend-alert-item high-border">HIGH</span>
         </div>
       </div>
 
@@ -157,30 +169,41 @@ const HeatmapView = ({ onTickerClick }) => {
                   {sectorTickers.map(({ ticker, name }) => {
                     const d = dataMap[ticker] || {};
                     const pct = d.price_change_pct || 0;
-                    const bgColor = getPriceColor(pct);
                     const moverScore = d.mover_score || 0;
-                    // Scale tile: min 1fr, higher mover_score = wider
-                    const flex = Math.max(1, 1 + moverScore / 3);
+                    const alertLevel = d.alert_level || 'LOW';
+                    const optionsScore = d.options_score || 0;
+                    const volumeScore = d.volume_score || 0;
+                    const bgColor = getSignalColor(moverScore);
+                    const border = getAlertBorder(alertLevel);
+                    const alertClass = getAlertClass(alertLevel);
+                    // Size by mover_score: higher signal = bigger tile
+                    const flex = Math.max(1, 1 + moverScore / 2);
+                    const showFire = optionsScore >= 6 || volumeScore >= 6;
 
                     return (
                       <div
                         key={ticker}
-                        className="heatmap-tile"
-                        style={{ background: bgColor, flex }}
+                        className={`heatmap-tile ${alertClass}`}
+                        style={{ background: bgColor, flex, border }}
                         onClick={() => onTickerClick && onTickerClick(ticker)}
                       >
-                        <span className="tile-ticker">{ticker}</span>
+                        <div className="tile-top-row">
+                          <span className="tile-ticker">{ticker}</span>
+                          {showFire && <span className="tile-activity-icon" title="High options/volume activity">🔥</span>}
+                        </div>
                         <span className="tile-name">{name}</span>
                         <span className={`tile-change ${pct >= 0 ? 'up' : 'down'}`}>
                           {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%
                         </span>
+                        <span className="tile-signal">Signal: {moverScore.toFixed(1)}</span>
                         <div className="tile-tooltip">
                           <div><strong>{name}</strong> ({ticker})</div>
-                          <div>Alert: {d.alert_level || 'N/A'}</div>
-                          <div>Options: {d.options_score || 0}/10</div>
-                          <div>Volume: {d.volume_score || 0}/10</div>
+                          <div>Alert: {alertLevel}</div>
+                          <div>Mover Score: {moverScore.toFixed(1)}</div>
+                          <div>Options: {optionsScore}/10</div>
+                          <div>Volume: {volumeScore}/10</div>
                           <div>Social: {d.social_score || 0}/10</div>
-                          <div>Mover: {moverScore.toFixed(1)}</div>
+                          <div>Price: {pct >= 0 ? '+' : ''}{pct.toFixed(2)}%</div>
                         </div>
                       </div>
                     );

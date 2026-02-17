@@ -89,9 +89,15 @@ TODAY_STR = TODAY.isoformat()
 
 # --- TICKERS (Separated for better normalization) ---
 STOCK_TICKERS = [
-    "AAPL", "MSFT", "AMZN", "GOOG", "META",
-    "NVDA", "TSLA", "PLTR", "AMD", "NFLX", "SNAP", "RBLX",
-    "GME", "AMC", "HOOD", "COIN", "SOFI"
+    "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX",
+    "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
+    "V", "MA", "PYPL", "XYZ", "COIN", "HOOD", "SOFI",
+    "GME", "AMC", "PLTR", "SNAP", "RBLX",
+    "UBER", "LYFT", "ABNB", "DASH", "SPOT", "ZM",
+    "JPM", "BAC", "GS", "MS", "WFC",
+    "JNJ", "UNH", "PFE", "ABBV", "LLY",
+    "XOM", "CVX", "COP", "SLB",
+    "WMT", "HD", "NKE", "MCD",
 ]
 CRYPTO_TICKERS = [
     "BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "DOGE-USD"
@@ -919,6 +925,58 @@ def send_critical_alert_emails(critical_tickers: List[str]):
             print(f"Alert email sent to {sub['email']} for {ticker_list}")
         except Exception as e:
             print(f"SMTP error sending to {sub['email']}: {e}")
+
+
+@app.get("/debug/social")
+async def debug_social():
+    """Debug endpoint: fetch raw ApeWisdom data and show matching results for our tickers."""
+    global detector
+    if not detector:
+        detector = MemeStockDetector()
+
+    all_tickers = await detector.fetch_apewisdom_data()
+
+    # Build a set of our watchlist tickers
+    our_tickers = set(STOCK_TICKERS)
+
+    # Find which of our tickers appear in ApeWisdom (exact match)
+    exact_matches = {}
+    for item in all_tickers:
+        aw_ticker = item.get("ticker", "").upper()
+        if aw_ticker in our_tickers:
+            exact_matches[aw_ticker] = {
+                "rank": item.get("rank"),
+                "mentions": item.get("mentions", 0),
+                "upvotes": item.get("upvotes", 0),
+                "name": item.get("name", ""),
+            }
+
+    # Name-field fallback matches
+    name_matches = {}
+    for ticker in our_tickers:
+        if ticker in exact_matches:
+            continue
+        ticker_lower = ticker.lower()
+        for item in all_tickers:
+            name = item.get("name", "").lower()
+            if ticker_lower in name:
+                name_matches[ticker] = {
+                    "aw_ticker": item.get("ticker"),
+                    "aw_name": item.get("name"),
+                    "mentions": item.get("mentions", 0),
+                }
+                break
+
+    return {
+        "apewisdom_total": len(all_tickers),
+        "top_20": [
+            {"ticker": r.get("ticker"), "name": r.get("name"), "mentions": r.get("mentions", 0)}
+            for r in all_tickers[:20]
+        ],
+        "our_exact_matches": exact_matches,
+        "our_name_fallback_matches": name_matches,
+        "our_tickers_missing": sorted(our_tickers - set(exact_matches.keys()) - set(name_matches.keys())),
+    }
 
 
 @app.on_event("shutdown")
