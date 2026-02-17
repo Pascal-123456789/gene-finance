@@ -184,6 +184,20 @@
   font-size: 2em;
   font-weight: bold;
   color: #00ff88;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: help;
+}
+
+.score-info-icon {
+  font-size: 0.45em;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.alert-score:hover .score-info-icon {
+  color: #aaa;
 }
 
 /* Price Info */
