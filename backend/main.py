@@ -967,22 +967,6 @@ async def debug_social():
                 "name": item.get("name", ""),
             }
 
-    # Name-field fallback matches
-    name_matches = {}
-    for ticker in our_tickers:
-        if ticker in exact_matches:
-            continue
-        ticker_lower = ticker.lower()
-        for item in all_tickers:
-            name = item.get("name", "").lower()
-            if ticker_lower in name:
-                name_matches[ticker] = {
-                    "aw_ticker": item.get("ticker"),
-                    "aw_name": item.get("name"),
-                    "mentions": item.get("mentions", 0),
-                }
-                break
-
     return {
         "apewisdom_total": len(all_tickers),
         "top_20": [
@@ -990,8 +974,7 @@ async def debug_social():
             for r in all_tickers[:20]
         ],
         "our_exact_matches": exact_matches,
-        "our_name_fallback_matches": name_matches,
-        "our_tickers_missing": sorted(our_tickers - set(exact_matches.keys()) - set(name_matches.keys())),
+        "our_tickers_not_in_apewisdom": sorted(our_tickers - set(exact_matches.keys())),
     }
 
 

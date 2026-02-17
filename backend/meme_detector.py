@@ -285,19 +285,6 @@ class MemeStockDetector:
                     match = item
                     break
 
-            # Fallback: check if ticker appears in the 'name' field
-            if not match:
-                ticker_lower = ticker.lower()
-                for item in all_tickers:
-                    name = item.get("name", "").lower()
-                    if ticker_lower in name:
-                        match = item
-                        print(
-                            f"SOCIAL FALLBACK: {ticker} matched via name field "
-                            f"'{item.get('name')}' (ApeWisdom ticker: {item.get('ticker')})"
-                        )
-                        break
-
             if not match:
                 if ticker.upper() in HIGH_DISCUSSION:
                     top_10 = [f"{r.get('ticker')}({r.get('mentions', 0)})" for r in all_tickers[:10]]
