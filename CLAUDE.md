@@ -50,13 +50,14 @@ Key API endpoints:
 - `/stock/{ticker}` — Single stock info via yfinance
 - `POST /subscribe` — Upserts email + tickers array into `alert_subscriptions` table for CRITICAL-level email alerts
 - `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to genuinely sensitive tickers via specific keyword phrases. 10-minute in-memory cache. Ticker mapping: fed rate/interest rate/fed chair/fed decision → SOFI, HOOD, COIN, BAC, JPM, GS, MS, WFC; recession → AAPL, MSFT, AMZN, GOOGL, META, NVDA; crypto regulation/ban/sec → COIN, HOOD; earnings → dynamically matched by ticker mention in question text only.
+- `/debug/social` — Debug endpoint returning raw ApeWisdom response: top 20 trending tickers, exact matches with our watchlist, name-field fallback matches, and list of our tickers missing from ApeWisdom data
 
 Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background task updates Supabase every hour. Finnhub calls have 0.5s rate-limit delays. After each scan, `send_critical_alert_emails()` sends SMTP emails to subscribed users for any CRITICAL-level tickers.
 
 ### Frontend (frontend/src/)
-- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/heatmap/watchlist/premium), ticker detail modal (includes Polymarket section), and Coming Soon premium placeholder
-- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, Polymarket odds badge on matching cards, and Watch button per card
-- **HeatmapView.jsx** — Market heatmap grid of ticker tiles colored by alert level (red=CRITICAL, orange=HIGH, yellow=MEDIUM, grey=LOW) with tile size proportional to mover_score. Shows ticker symbol and price change %
+- **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/heatmap/watchlist/premium), ticker detail modal (includes Polymarket section), Coming Soon premium placeholder, persistent "?" help FAB (bottom-right, all pages) that opens a HelpModal explaining alert levels, three signals with weights, predicted movers labels, heatmap, Polymarket badges, and a disclaimer. Landing page includes a 3-step "How It Works" section (scan → score → act).
+- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp, social score bar, Polymarket odds badge on matching cards, Watch button per card, signal bar hover tooltips (options/volume/social explanations), and info icon next to alert score showing weighted formula
+- **HeatmapView.jsx** — Market heatmap grid of ticker tiles colored by mover_score signal strength (teal gradient), with CRITICAL alert pulsing red border and HIGH alert orange border. Tile size proportional to mover_score. Shows ticker symbol, price change %, signal score, and fire icon for high options/volume activity (>=6/10)
 - **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
 - **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button and email alert subscription form
 - **AlertDashboard.jsx** — Alert summary cards with detail modals
