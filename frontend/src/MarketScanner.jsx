@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { FaInfoCircle } from 'react-icons/fa';
 import './MarketScanner.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -194,8 +195,9 @@ const MarketScanner = () => {
                   <h2 className="alert-ticker">
                     {getEmoji(alert.alert_level)} {alert.ticker}
                   </h2>
-                  <span className="alert-score">
+                  <span className="alert-score" title="Weighted score: 40% options flow + 35% volume spike + 25% social buzz">
                     {(alert.alert_score || alert.early_warning_score || 0).toFixed(1)}
+                    <FaInfoCircle className="score-info-icon" />
                   </span>
                 </div>
 
@@ -224,7 +226,7 @@ const MarketScanner = () => {
                 })()}
 
                 <div className="unified-signals">
-                  <div className="signal-row">
+                  <div className="signal-row" title="Unusual call option buying vs puts — high = institutions betting on a move">
                     <span className="signal-label">Options</span>
                     <span className="signal-bar">
                       <div className="signal-fill" style={{width: `${(alert.options_score || 0) * 10}%`}}/>
@@ -232,7 +234,7 @@ const MarketScanner = () => {
                     <span className="signal-value">{alert.options_score || 0}/10</span>
                   </div>
 
-                  <div className="signal-row">
+                  <div className="signal-row" title="Today's trading volume vs 30-day average — high = unusual activity">
                     <span className="signal-label">Volume</span>
                     <span className="signal-bar">
                       <div className="signal-fill volume" style={{width: `${(alert.volume_score || 0) * 10}%`}}/>
@@ -240,7 +242,7 @@ const MarketScanner = () => {
                     <span className="signal-value">{alert.volume_score || 0}/10</span>
                   </div>
 
-                  <div className="signal-row">
+                  <div className="signal-row" title="Reddit/WSB mention spike — high = retail crowd piling in">
                     <span className="signal-label">Social</span>
                     <span className="signal-bar">
                       <div className="signal-fill social" style={{width: `${(alert.social_score || 0) * 10}%`}}/>
