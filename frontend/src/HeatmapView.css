@@ -21,7 +21,7 @@
   margin: 0 0 14px 0;
 }
 
-/* Legend gradient bar */
+/* Legend gradient bar — signal strength */
 .heatmap-legend-bar {
   display: flex;
   align-items: center;
@@ -35,11 +35,10 @@
   border-radius: 4px;
   background: linear-gradient(
     to right,
-    hsl(0, 70%, 28%),
-    hsl(0, 30%, 20%) 35%,
-    hsl(0, 0%, 18%) 50%,
-    hsl(140, 30%, 20%) 65%,
-    hsl(140, 70%, 28%)
+    hsl(160, 0%, 16%),
+    hsl(160, 30%, 20%) 40%,
+    hsl(160, 50%, 24%) 70%,
+    hsl(160, 65%, 28%)
   );
 }
 
@@ -48,6 +47,31 @@
   font-size: 0.75em;
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* Alert level legend */
+.heatmap-legend-alerts {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.legend-alert-item {
+  font-size: 0.7em;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #ccc;
+}
+
+.legend-alert-item.critical-border {
+  border: 2px solid #ff3333;
+  color: #ff3333;
+}
+
+.legend-alert-item.high-border {
+  border: 2px solid #ff9900;
+  color: #ff9900;
 }
 
 /* Sector sections */
@@ -75,6 +99,7 @@
   display: flex;
   gap: 3px;
   min-height: 100px;
+  flex-wrap: wrap;
 }
 
 /* Individual tiles */
@@ -87,11 +112,26 @@
   min-height: 100px;
   border-radius: 6px;
   cursor: pointer;
-  transition: outline 0.15s ease, transform 0.15s ease;
+  transition: outline 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
   position: relative;
   padding: 10px 6px;
   box-sizing: border-box;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* CRITICAL alert — pulsing red border */
+.heatmap-tile.alert-critical {
+  box-shadow: 0 0 8px rgba(255, 51, 51, 0.4);
+  animation: pulse-critical 2s ease-in-out infinite;
+}
+
+@keyframes pulse-critical {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 51, 51, 0.3); }
+  50% { box-shadow: 0 0 16px rgba(255, 51, 51, 0.6); }
+}
+
+/* HIGH alert — orange glow */
+.heatmap-tile.alert-high {
+  box-shadow: 0 0 6px rgba(255, 153, 0, 0.25);
 }
 
 .heatmap-tile:hover {
@@ -100,11 +140,23 @@
   transform: scale(1.03);
 }
 
+/* Top row: ticker + fire icon */
+.tile-top-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .tile-ticker {
   font-weight: 800;
   font-size: 1.2em;
   color: #fff;
   line-height: 1.2;
+}
+
+.tile-activity-icon {
+  font-size: 0.9em;
+  line-height: 1;
 }
 
 .tile-name {
@@ -118,7 +170,7 @@
 .tile-change {
   font-size: 0.85em;
   font-weight: 700;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .tile-change.up {
@@ -127,6 +179,12 @@
 
 .tile-change.down {
   color: #ff6b6b;
+}
+
+.tile-signal {
+  font-size: 0.65em;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2px;
 }
 
 /* Tooltip */
