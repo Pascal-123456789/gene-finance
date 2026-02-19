@@ -138,8 +138,13 @@ async def scheduled_update_loop():
             print("AUTO-UPDATE: Alert scan complete. Starting hype fetch...")
             await trending_hype()
             print("AUTO-UPDATE: Hype data updated. Now updating predicted movers...")
-            await predicted_movers()
-            print("AUTO-UPDATE: Success. Sleeping for 1 hour.")
+            try:
+                movers_result = await predicted_movers()
+                movers_count = len(movers_result) if isinstance(movers_result, list) else 0
+                print(f"AUTO-UPDATE: Predicted movers complete — {movers_count} tickers processed.")
+            except Exception as me:
+                print(f"AUTO-UPDATE: predicted_movers() FAILED: {me}")
+            print("AUTO-UPDATE: All tasks complete. Sleeping for 1 hour.")
         except Exception as e:
             print(f"AUTO-UPDATE ERROR: {e}")
 
@@ -517,6 +522,7 @@ async def predicted_movers():
     # Save to Supabase
     if supabase and results:
         try:
+            from datetime import datetime
             records = [
                 {
                     "ticker": r["ticker"],
@@ -530,6 +536,7 @@ async def predicted_movers():
                 }
                 for r in results
             ]
+            print(f"Writing {len(records)} movers to predicted_movers table at {datetime.now().isoformat()}")
             supabase.table('predicted_movers').upsert(records, on_conflict='ticker').execute()
             print(f"Saved {len(records)} predicted movers to database")
         except Exception as e:
@@ -993,13 +1000,28 @@ async def debug_scan_status():
         latest = max(timestamps) if timestamps else None
         oldest = min(timestamps) if timestamps else None
 
+        # Also check predicted_movers table
+        movers_res = supabase.table('predicted_movers').select('ticker,updated_at,mover_score').execute()
+        movers_rows = movers_res.data or []
+        movers_timestamps = [r["updated_at"] for r in movers_rows if r.get("updated_at")]
+        movers_latest = max(movers_timestamps) if movers_timestamps else None
+        movers_oldest = min(movers_timestamps) if movers_timestamps else None
+
         return {
-            "total_tickers_in_db": len(rows),
-            "last_updated": latest,
-            "oldest_updated": oldest,
-            "zero_price_tickers": sorted(zero_price),
-            "zero_price_count": len(zero_price),
-            "all_tickers": sorted([r["ticker"] for r in rows]),
+            "meme_alerts": {
+                "total_tickers": len(rows),
+                "last_updated": latest,
+                "oldest_updated": oldest,
+                "zero_price_tickers": sorted(zero_price),
+                "zero_price_count": len(zero_price),
+                "all_tickers": sorted([r["ticker"] for r in rows]),
+            },
+            "predicted_movers": {
+                "total_tickers": len(movers_rows),
+                "last_updated": movers_latest,
+                "oldest_updated": movers_oldest,
+                "all_tickers": sorted([r["ticker"] for r in movers_rows]),
+            },
         }
     except Exception as e:
         return {"error": str(e)}
