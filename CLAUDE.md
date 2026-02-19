@@ -41,7 +41,7 @@ Both servers must run simultaneously for full functionality. The frontend reads 
 - **meme_detector.py** — Three-signal early warning system (options flow, volume spikes, Reddit/WSB social buzz via ApeWisdom) that scores tickers 0-10 and assigns alert levels (CRITICAL/HIGH/MEDIUM/LOW). ApeWisdom data is cached for 10 minutes. Social matching is exact ticker symbol only (no name-field fallback — that caused wrong matches like V→NVDA, GS→penny stocks). If a ticker isn't in ApeWisdom's top 100, social score is correctly 0.
 
 Key API endpoints:
-- `/alerts/scan` — Full 50-ticker scan (expensive, triggers API calls)
+- `/alerts/scan` — Full 49-ticker scan (expensive, triggers API calls). XYZ (Block/SQ rebrand) was removed — confusing ticker symbol.
 - `/alerts/cached` — Fast cached alerts from Supabase (used by frontend)
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
@@ -57,7 +57,7 @@ Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polym
 
 ### Frontend (frontend/src/)
 - **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/heatmap/watchlist/premium), ticker detail modal (includes Polymarket section), Coming Soon premium placeholder, persistent "?" help FAB (bottom-right, all pages) that opens a HelpModal explaining alert levels, three signals with weights, predicted movers labels, heatmap, Polymarket badges, and a disclaimer. Landing page includes a 3-step "How It Works" section (scan → score → act).
-- **MarketScanner.jsx** — Primary dashboard showing 50-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp with relative time (e.g. "5m ago", warns if stale), social score bar, Polymarket odds badge on matching cards, Watch button per card, signal bar hover tooltips (options/volume/social explanations), and info icon next to alert score showing weighted formula
+- **MarketScanner.jsx** — Primary dashboard showing 49-ticker watchlist with sorting, auto-refresh from `/alerts/cached`, empty state handling, last-scanned timestamp with relative time (e.g. "5m ago", warns if stale), social score bar, Polymarket odds badge on matching cards, Watch button per card, signal bar hover tooltips (options/volume/social explanations), info icon next to alert score showing weighted formula, and descriptive signal labels ("No unusual activity" / "1 signal firing" / "All signals firing" — a signal counts as firing only if score >= 3/10)
 - **HeatmapView.jsx** — Market heatmap grid of ticker tiles colored by mover_score signal strength (teal gradient), with CRITICAL alert pulsing red border and HIGH alert orange border. Tile size proportional to mover_score. Shows ticker symbol, price change %, signal score, and fire icon for high options/volume activity (>=6/10)
 - **PredictedMovers.jsx** — Predicted Big Movers view with cards showing mover score, label, 5-day momentum, and price level flags (52-week high, round numbers)
 - **WatchlistView.jsx** — Filtered view of watched tickers (stored in localStorage under `foega_watchlist`) with remove button and email alert subscription form
