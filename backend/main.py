@@ -81,7 +81,7 @@ SMTP_PASS = os.getenv("SMTP_PASS")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "")
 
 # --- RATE LIMIT & DATE ---
-FINNHUB_CALL_DELAY = 0.5 # Delay increased to respect Finnhub limits
+FINNHUB_CALL_DELAY = 1.5 # ~40 calls/min, safely under Finnhub's 60/min limit
 
 TODAY = date.today()
 SEVEN_DAYS_AGO = (TODAY - timedelta(days=7)).isoformat()
@@ -631,12 +631,22 @@ async def scan_for_alerts():
             item["news_count"] = 0
             finnhub_errors += 1
 
-        # Add price
+        # Add price — try info first, fall back to history()
         try:
             stock = yf.Ticker(ticker)
             info = stock.info
-            item["current_price"] = info.get("regularMarketPrice", 0) or 0
-            item["price_change_pct"] = info.get("regularMarketChangePercent", 0) or 0
+            price = info.get("regularMarketPrice", 0) or 0
+            pct = info.get("regularMarketChangePercent", 0) or 0
+            # Fallback: if info didn't return price, use recent history
+            if price <= 0:
+                hist = stock.history(period="2d")
+                if not hist.empty:
+                    price = float(hist["Close"].iloc[-1])
+                    if len(hist) >= 2:
+                        prev = float(hist["Close"].iloc[-2])
+                        pct = ((price - prev) / prev * 100) if prev > 0 else 0
+            item["current_price"] = price
+            item["price_change_pct"] = pct
         except Exception as e:
             print(f"yfinance error for {ticker}: {e}")
             item["current_price"] = 0

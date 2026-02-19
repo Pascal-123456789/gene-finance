@@ -18,11 +18,13 @@ import httpx
 
 
 class MemeStockDetector:
-    
+
     def __init__(self):
         self.client = httpx.AsyncClient(timeout=10)
         self._apewisdom_cache = None
         self._apewisdom_ts = None
+        self._options_cache = {}  # ticker -> {"data": {...}, "ts": datetime}
+        self._options_cache_ttl = 4 * 3600  # 4 hours in seconds
     
     # ==========================================
     # SIGNAL 1: UNUSUAL OPTIONS ACTIVITY
@@ -30,15 +32,30 @@ class MemeStockDetector:
     
     def get_options_signal(self, ticker: str) -> Dict:
         """
-        Detects unusual options activity (free via yfinance)
-        
+        Detects unusual options activity (free via yfinance).
+        Cached for 4 hours per ticker — options flow doesn't change minute-to-minute.
+
         Key indicators:
         - High call/put ratio (bullish bets)
         - Volume vs open interest (new positions being opened)
         - Near-term expiry activity (short-term bets)
-        
+
         Returns score 0-10
         """
+        # Check cache
+        ticker_upper = ticker.upper()
+        cached = self._options_cache.get(ticker_upper)
+        if cached:
+            age = (datetime.now() - cached["ts"]).total_seconds()
+            if age < self._options_cache_ttl:
+                return cached["data"]
+
+        result = self._fetch_options_signal(ticker_upper)
+        self._options_cache[ticker_upper] = {"data": result, "ts": datetime.now()}
+        return result
+
+    def _fetch_options_signal(self, ticker: str) -> Dict:
+        """Actual yfinance options fetch (called by get_options_signal when cache misses)."""
         try:
             stock = yf.Ticker(ticker)
             
