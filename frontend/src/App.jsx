@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh } from 'react-icons/fa';
+import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh, FaEnvelope } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
 import WatchlistView from './WatchlistView';
@@ -257,6 +257,11 @@ export default function App() {
                             <FaLock /> <span>Premium Access</span>
                         </div>
                     </nav>
+                    <div className="sidebar-feedback">
+                        <a href="mailto:dipbedford@gmail.com?subject=Foega%20Feedback">
+                            <FaEnvelope /> <span>Feedback</span>
+                        </a>
+                    </div>
                     <div className="hype-indicator"><FaFire /> <span>Scanner Online</span></div>
                 </div>
             )}
@@ -284,6 +289,10 @@ export default function App() {
             </button>
 
             {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
+
+            <div className="disclaimer-footer">
+                Not financial advice. Use as one data point among many. Always do your own research.
+            </div>
         </div>
     );
 }

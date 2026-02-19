@@ -447,13 +447,19 @@ body {
 
 .modal-content {
     background-color: #1c1c1c;
-    padding: 30px;
+    padding: 32px;
     border-radius: 12px;
-    width: 90%;
-    max-width: 600px;
+    width: 90vw;
+    max-width: 700px;
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
     position: relative;
     color: #e0e0e0;
+}
+
+@media (min-width: 768px) {
+    .modal-content {
+        min-width: 700px;
+    }
 }
 
 .modal-close-button {
@@ -884,13 +890,15 @@ body {
 /* Help Modal */
 /* --------------------------------- */
 .help-modal {
-    width: 90vw;
-    min-width: 400px;
-    max-width: 650px;
     max-height: 85vh;
     overflow-y: auto;
     text-align: left;
-    padding: 32px;
+}
+
+@media (min-width: 768px) {
+    .help-modal {
+        min-width: 700px;
+    }
 }
 
 .help-intro {
@@ -1041,4 +1049,48 @@ body {
     font-size: 0.95em;
     line-height: 1.5;
     margin: 0;
+}
+
+/* --------------------------------- */
+/* Disclaimer Footer */
+/* --------------------------------- */
+.disclaimer-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+    text-align: center;
+    padding: 6px 16px;
+    font-size: 0.7em;
+    color: #666;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(4px);
+    pointer-events: none;
+}
+
+/* --------------------------------- */
+/* Sidebar Feedback Link */
+/* --------------------------------- */
+.sidebar-feedback {
+    padding: 12px 20px;
+    border-top: 1px solid #333;
+}
+
+.sidebar-feedback a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #888;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.2s;
+}
+
+.sidebar-feedback a:hover {
+    color: var(--foega-primary-color);
+}
+
+.sidebar.closed .sidebar-feedback span {
+    display: none;
 }
