@@ -17,7 +17,7 @@ const SECTOR_MAP = {
   ],
   "Fintech": [
     { ticker: "V", name: "Visa" }, { ticker: "MA", name: "Mastercard" },
-    { ticker: "PYPL", name: "PayPal" }, { ticker: "XYZ", name: "Block" },
+    { ticker: "PYPL", name: "PayPal" },
     { ticker: "COIN", name: "Coinbase" }, { ticker: "HOOD", name: "Robinhood" },
     { ticker: "SOFI", name: "SoFi" },
   ],

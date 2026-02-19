@@ -91,7 +91,7 @@ TODAY_STR = TODAY.isoformat()
 STOCK_TICKERS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX",
     "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
-    "V", "MA", "PYPL", "XYZ", "COIN", "HOOD", "SOFI",
+    "V", "MA", "PYPL", "COIN", "HOOD", "SOFI",
     "GME", "AMC", "PLTR", "SNAP", "RBLX",
     "UBER", "LYFT", "ABNB", "DASH", "SPOT", "ZM",
     "JPM", "BAC", "GS", "MS", "WFC",
@@ -582,8 +582,8 @@ async def scan_for_alerts():
         # === SEMICONDUCTORS (6) ===
         "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
         
-        # === FINTECH & PAYMENTS (7) ===
-        "V", "MA", "PYPL", "XYZ", "COIN", "HOOD", "SOFI",
+        # === FINTECH & PAYMENTS (6) ===
+        "V", "MA", "PYPL", "COIN", "HOOD", "SOFI",
         
         # === MEME STOCKS (5) ===
         "GME", "AMC", "PLTR", "SNAP", "RBLX",

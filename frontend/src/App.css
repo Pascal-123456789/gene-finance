@@ -856,13 +856,13 @@ body {
     bottom: 24px;
     right: 24px;
     z-index: 1200;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     background: #1e1e1e;
     border: 2px solid #444;
     color: var(--foega-primary-color);
-    font-size: 1.5rem;
+    font-size: 18px;
     font-weight: 800;
     cursor: pointer;
     display: flex;
@@ -871,6 +871,7 @@ body {
     transition: background 0.2s, border-color 0.2s, transform 0.2s;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     font-family: inherit;
+    line-height: 1;
 }
 
 .help-fab:hover {
@@ -883,13 +884,13 @@ body {
 /* Help Modal */
 /* --------------------------------- */
 .help-modal {
-    width: 92%;
-    min-width: 600px;
-    max-width: 720px;
+    width: 90vw;
+    min-width: 400px;
+    max-width: 650px;
     max-height: 85vh;
     overflow-y: auto;
     text-align: left;
-    padding: 36px 40px;
+    padding: 32px;
 }
 
 .help-intro {
