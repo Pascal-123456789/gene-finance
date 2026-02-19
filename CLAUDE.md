@@ -45,15 +45,16 @@ Key API endpoints:
 - `/alerts/cached` — Fast cached alerts from Supabase (used by frontend)
 - `/trending/hype` — Z-score hype analysis across all tickers
 - `/trending/cached_hype` — Fast cached hype data
-- `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table
+- `/movers/predicted` — Composite mover score (40% early_warning + 40% z-score momentum + 20% price level bonus), labels BREAKOUT (>=4.0) / WATCH (>=2.0) / NEUTRAL, saves to `predicted_movers` table. Calls yfinance per ticker so it's slow — frontend should use `/movers/cached` instead.
+- `/movers/cached` — Fast cached predicted movers from Supabase (used by frontend HeatmapView + PredictedMovers)
 - `/premium/walk_forward/{ticker}` — Returns 501 Not Implemented (stub); frontend shows Coming Soon placeholder instead of calling this
 - `/stock/{ticker}` — Single stock info via yfinance
 - `POST /subscribe` — Upserts email + tickers array into `alert_subscriptions` table for CRITICAL-level email alerts
 - `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to genuinely sensitive tickers via specific keyword phrases. 10-minute in-memory cache. Ticker mapping: fed rate/interest rate/fed chair/fed decision → SOFI, HOOD, COIN, BAC, JPM, GS, MS, WFC; recession → AAPL, MSFT, AMZN, GOOGL, META, NVDA; crypto regulation/ban/sec → COIN, HOOD; earnings → dynamically matched by ticker mention in question text only.
 - `/debug/social` — Debug endpoint returning raw ApeWisdom response: top 20 trending tickers, exact matches with our watchlist, and list of our tickers not in ApeWisdom
-- `/debug/scan-status` — Shows total tickers in Supabase, last/oldest update timestamps, and which tickers have price = 0
+- `/debug/scan-status` — Shows both `meme_alerts` and `predicted_movers` tables: ticker counts, last/oldest update timestamps, and zero-price tickers
 
-Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background `scheduled_update_loop` runs hourly: `scan_for_alerts()` → `trending_hype()` → `predicted_movers()`. Tickers returning $0 price from yfinance are skipped (not saved to Supabase). Finnhub calls have 0.5s rate-limit delays with failure count logging. After each scan, `send_critical_alert_emails()` sends SMTP emails to subscribed users for any CRITICAL-level tickers.
+Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background `scheduled_update_loop` runs hourly: `scan_for_alerts()` → `trending_hype()` → `predicted_movers()`. The `predicted_movers()` step is error-isolated so failures don't break the loop. Tickers returning $0 price from yfinance are skipped (not saved to Supabase). Finnhub calls have 0.5s rate-limit delays with failure count logging. After each scan, `send_critical_alert_emails()` sends SMTP emails to subscribed users for any CRITICAL-level tickers.
 
 ### Frontend (frontend/src/)
 - **App.jsx** — Main shell with collapsible sidebar navigation, view routing (landing/dashboard/movers/heatmap/watchlist/premium), ticker detail modal (includes Polymarket section), Coming Soon premium placeholder, persistent "?" help FAB (bottom-right, all pages) that opens a HelpModal explaining alert levels, three signals with weights, predicted movers labels, heatmap, Polymarket badges, and a disclaimer. Landing page includes a 3-step "How It Works" section (scan → score → act).
