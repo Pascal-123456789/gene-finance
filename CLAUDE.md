@@ -32,7 +32,7 @@ Both servers must run simultaneously for full functionality. The frontend reads 
 See `backend/.env.example` for a template with placeholder values.
 - `SUPABASE_URL` / `SUPABASE_KEY` — Supabase project credentials
 - `FINNHUB_API_KEY` — News sentiment data
-- `FRONTEND_URL` — Optional, for CORS in production
+- `FRONTEND_URL` — Optional, appended to CORS origins if set (production Vercel domain `https://gene-finance.vercel.app` is hardcoded)
 - `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` — Optional, for email alerts on CRITICAL tickers
 
 ## Architecture
@@ -54,6 +54,8 @@ Key API endpoints:
 - `/polymarket/events` — Macro-relevant prediction market events from Polymarket's Gamma API, mapped to genuinely sensitive tickers via specific keyword phrases. 10-minute in-memory cache. Ticker mapping: fed rate/interest rate/fed chair/fed decision → SOFI, HOOD, COIN, BAC, JPM, GS, MS, WFC; recession → AAPL, MSFT, AMZN, GOOGL, META, NVDA; crypto regulation/ban/sec → COIN, HOOD; earnings → dynamically matched by ticker mention in question text only.
 - `/debug/social` — Debug endpoint returning raw ApeWisdom response: top 20 trending tickers, exact matches with our watchlist, and list of our tickers not in ApeWisdom
 - `/debug/scan-status` — Shows both `meme_alerts` and `predicted_movers` tables: ticker counts, last/oldest update timestamps, and zero-price tickers
+
+CORS: Hardcoded origins for localhost:5173, 127.0.0.1:5173, and `https://gene-finance.vercel.app`. `FRONTEND_URL` env var is dynamically appended if set, allowing additional domains without code changes.
 
 Caching: 5-minute in-memory TTL for expensive endpoints; 10-minute TTL for Polymarket; background `scheduled_update_loop` runs hourly: `scan_for_alerts()` → `trending_hype()` → `predicted_movers()`. The `predicted_movers()` step is error-isolated so failures don't break the loop. Tickers returning $0 price from yfinance are skipped (not saved to Supabase); price fetch falls back to `history()` if `info` API is flaky. Finnhub calls have 1.5s rate-limit delays (~40/min, under 60/min limit) with failure count logging. After each scan, `send_critical_alert_emails()` sends SMTP emails to subscribed users for any CRITICAL-level tickers.
 
