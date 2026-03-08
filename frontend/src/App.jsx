@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaBars, FaRocket, FaStar, FaTh, FaEnvelope } from 'react-icons/fa';
+import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh, FaEnvelope } from 'react-icons/fa';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
 import WatchlistView from './WatchlistView';
