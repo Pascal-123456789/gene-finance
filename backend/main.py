@@ -27,12 +27,14 @@ load_dotenv() # Loads SUPABASE_URL and KEY from your .env file
 
 app = FastAPI(title="GenZ Finance API")
 
-# Port 5173 is the default for Vite
+# CORS: dev origins + production FRONTEND_URL
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    os.getenv("FRONTEND_URL"),
+    "https://gene-finance.vercel.app",
 ]
+if os.getenv("FRONTEND_URL"):
+    origins.append(os.getenv("FRONTEND_URL"))
 
 app.add_middleware(
     CORSMiddleware,
