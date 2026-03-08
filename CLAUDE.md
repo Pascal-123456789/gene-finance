@@ -29,6 +29,7 @@ python main.py     # Uvicorn server at http://localhost:8000
 Both servers must run simultaneously for full functionality. The frontend reads the API base URL from `import.meta.env.VITE_API_URL` (falls back to `http://127.0.0.1:8000`). See `frontend/.env.example`.
 
 ## Required Environment Variables (backend/.env)
+See `backend/.env.example` for a template with placeholder values.
 - `SUPABASE_URL` / `SUPABASE_KEY` — Supabase project credentials
 - `FINNHUB_API_KEY` — News sentiment data
 - `FRONTEND_URL` — Optional, for CORS in production
