@@ -13,6 +13,7 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
   const [lastScanned, setLastScanned] = useState(null);
   const [historyData, setHistoryData] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [showLow, setShowLow] = useState(false);
   const [watchlist, setWatchlist] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('foega_watchlist')) || [];
@@ -80,7 +81,11 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
     fetchAlerts();
   }, []);
 
-  const sortedAlerts = [...alerts].sort((a, b) => {
+  const filteredAlerts = showLow
+    ? alerts
+    : alerts.filter(a => a.alert_level !== 'LOW');
+
+  const sortedAlerts = [...filteredAlerts].sort((a, b) => {
     switch (sortBy) {
       case 'volume':
         return (b.volume_score || 0) - (a.volume_score || 0);
@@ -195,6 +200,13 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                 <option value="price">Price Change</option>
               </select>
             </div>
+
+            <button
+              className={`filter-toggle-btn ${showLow ? 'active' : ''}`}
+              onClick={() => setShowLow(prev => !prev)}
+            >
+              {showLow ? 'Showing All' : 'Show All (including LOW)'}
+            </button>
           </div>
 
           <div className="data-list scanner-grid">
@@ -288,7 +300,7 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
           </div>
 
           <footer className="dashboard-footer">
-            Monitoring {alerts.length} stocks. Backend updates hourly.
+            Showing {filteredAlerts.length} of {alerts.length} stocks. Backend updates hourly.
             {lastScanned && (
               <span className="last-scanned">
                 {' '}| Last scanned: {lastScanned.toLocaleString()}
