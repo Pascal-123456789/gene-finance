@@ -4,6 +4,12 @@
   padding: 20px;
 }
 
+.last-updated-label {
+  color: #666;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
 /* Scanner Controls */
 .scanner-controls {
   display: flex;

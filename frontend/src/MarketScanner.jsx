@@ -137,6 +137,18 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
         <p className="main-brand-tagline">
           Unified options flow, volume analysis & sentiment tracking
         </p>
+        {lastScanned && (
+          <p className="last-updated-label">
+            Last updated: {(() => {
+              const mins = Math.round((Date.now() - lastScanned.getTime()) / 60000);
+              if (mins < 1) return 'just now';
+              if (mins < 60) return `${mins} minute${mins !== 1 ? 's' : ''} ago`;
+              const hrs = Math.round(mins / 60);
+              if (hrs < 24) return `${hrs} hour${hrs !== 1 ? 's' : ''} ago`;
+              return `${Math.round(hrs / 24)} day${Math.round(hrs / 24) !== 1 ? 's' : ''} ago`;
+            })()}
+          </p>
+        )}
       </div>
 
       {loading ? (
