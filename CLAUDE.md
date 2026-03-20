@@ -79,7 +79,7 @@ State management is local React hooks only (useState/useEffect). No router libra
 - **alert_subscriptions** — Email alert subscriptions with email (unique), tickers array, and created_at timestamp (migration: `003_email_alerts.sql`)
 
 ### Styling
-Dark theme with green (#00ff84) and amber (#ff9900) accents. CSS files are colocated with their components. Sidebar collapses from 250px to 70px.
+Dark navy theme. Page background: `#0f172a`, card backgrounds: `#1e293b`, elevated/hover surfaces: `#334155`, borders: `#334155`. Primary accent: `#22c55e` (green), secondary accent: `#ff9900` (amber). CSS variables defined in `App.css :root`. CSS files are colocated with their components. Sidebar collapses from 250px to 70px.
 
 ## Tech Notes
 - No TypeScript — plain JavaScript (JSX)
