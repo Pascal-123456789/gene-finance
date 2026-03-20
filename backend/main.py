@@ -32,6 +32,8 @@ origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "https://gene-finance.vercel.app",
+    "https://earlybell.app",
+    "https://www.earlybell.app",
 ]
 if os.getenv("FRONTEND_URL"):
     origins.append(os.getenv("FRONTEND_URL"))
