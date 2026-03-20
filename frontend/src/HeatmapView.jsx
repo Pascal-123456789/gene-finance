@@ -137,7 +137,7 @@ const HeatmapView = ({ onTickerClick }) => {
     <div className="content-area heatmap-view">
       <div className="heatmap-header">
         <h1 className="heatmap-title">Market Heatmap</h1>
-        <p className="heatmap-subtitle">Color & size = Foega signal strength. Price change shown inside.</p>
+        <p className="heatmap-subtitle">Color & size = EarlyBell signal strength. Price change shown inside.</p>
         <div className="heatmap-legend-bar">
           <span className="legend-label">Low signal</span>
           <div className="legend-gradient" />

@@ -12,9 +12,9 @@ const HelpModal = ({ onClose }) => (
     <div className="modal-overlay" onClick={onClose}>
         <div className="modal-content help-modal" onClick={e => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={onClose}>&times;</button>
-            <h2>How Foega Works</h2>
+            <h2>How EarlyBell Works</h2>
             <p className="help-intro">
-                Foega scans 50 stocks every hour for unusual activity that might signal a big move is coming.
+                EarlyBell scans 50 stocks every hour for unusual activity that might signal a big move is coming.
                 We combine three independent signals into one score so you can spot opportunities fast.
             </p>
 
@@ -49,7 +49,7 @@ const HelpModal = ({ onClose }) => (
 
             <div className="help-section">
                 <h3>Heatmap</h3>
-                <p>Tile size = our signal strength (bigger tile = stronger Foega signal). Border color = alert level (red = CRITICAL, orange = HIGH). Price change is shown as secondary info inside each tile.</p>
+                <p>Tile size = our signal strength (bigger tile = stronger EarlyBell signal). Border color = alert level (red = CRITICAL, orange = HIGH). Price change is shown as secondary info inside each tile.</p>
             </div>
 
             <div className="help-section">
@@ -183,7 +183,7 @@ export default function App() {
             case 'landing':
                 return (
                     <div className="content-area landing-page">
-                        <h1 className="landing-title">Foega Market Scanner</h1>
+                        <h1 className="landing-title">EarlyBell Market Scanner</h1>
                         <p className="landing-tagline">Track unusual options flow, volume spikes, and social sentiment across 49 US stocks</p>
                         <p>An open-source tool that aggregates publicly available market signals into a single dashboard, updated hourly.</p>
                         <button className="main-cta landing-button" onClick={() => setCurrentView('dashboard')}>
@@ -240,7 +240,7 @@ export default function App() {
             {currentView !== 'landing' && (
                 <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
                     <div className="logo-container">
-                        <span className="sidebar-logo">Foega</span>
+                        <span className="sidebar-logo">EarlyBell</span>
                         <button className="toggle-btn" onClick={() => setIsSidebarOpen(false)}>
                             <FaBars />
                         </button>
@@ -268,7 +268,7 @@ export default function App() {
                         </div>
                     </nav>
                     <div className="sidebar-feedback">
-                        <a href="mailto:dipbedford@gmail.com?subject=Foega%20Feedback">
+                        <a href="mailto:dipbedford@gmail.com?subject=EarlyBell%20Feedback">
                             <FaEnvelope /> <span>Feedback</span>
                         </a>
                     </div>

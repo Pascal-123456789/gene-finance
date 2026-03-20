@@ -1019,11 +1019,11 @@ def send_critical_alert_emails(critical_tickers: List[str]):
             f"CRITICAL alert triggered for: {ticker_list}\n\n"
             f"These tickers in your watchlist have hit CRITICAL alert level, "
             f"indicating unusual options flow, volume spikes, or social buzz.\n\n"
-            f"Check the Foega Market Scanner for details."
+            f"Check the EarlyBell Market Scanner for details."
         )
 
         msg = MIMEText(body)
-        msg["Subject"] = f"Foega Alert: {ticker_list} hit CRITICAL"
+        msg["Subject"] = f"EarlyBell Alert: {ticker_list} hit CRITICAL"
         msg["From"] = SMTP_FROM
         msg["To"] = sub["email"]
 
