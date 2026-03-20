@@ -56,7 +56,7 @@ Key API endpoints:
 - `/debug/social` — Debug endpoint returning raw ApeWisdom response: top 20 trending tickers, exact matches with our watchlist, and list of our tickers not in ApeWisdom
 - `/debug/scan-status` — Shows both `meme_alerts` and `predicted_movers` tables: ticker counts, last/oldest update timestamps, and zero-price tickers
 
-CORS: Hardcoded origins for localhost:5173, 127.0.0.1:5173, and `https://gene-finance.vercel.app`. `FRONTEND_URL` env var is dynamically appended if set, allowing additional domains without code changes.
+CORS: Hardcoded origins for localhost:5173, 127.0.0.1:5173, `https://gene-finance.vercel.app`, `https://earlybell.app`, and `https://www.earlybell.app`. `FRONTEND_URL` env var is dynamically appended if set, allowing additional domains without code changes.
 
 Finnhub news/sentiment: `async_news_sentiment_and_volume()` computes date range dynamically per call (not at module load) so long-running servers always query the current 7-day window. Crypto tickers (containing `-`, e.g. `BTC-USD`) are skipped since Finnhub's company-news endpoint only supports stock symbols. Accepts `debug=True` for verbose logging (URL, HTTP status, response size, article count, sentiment). Logs a startup warning if `FINNHUB_API_KEY` is missing and skips Finnhub calls entirely (returns 0) rather than sending `token=None`. Auth errors (401/403) are logged separately from rate limits. After each scan, a per-ticker log shows article count and sentiment for tickers with news, plus a summary of how many tickers had news and the top 3 by article count.
 
