@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Gene Finance is a financial market analysis platform that detects unusual stock/crypto activity via options flow, volume spikes, and sentiment signals. Monorepo with a React frontend and Python FastAPI backend.
+EarlyBell (formerly Foega / Gene Finance) is a financial market analysis platform that detects unusual stock/crypto activity via options flow, volume spikes, and sentiment signals. Monorepo with a React frontend and Python FastAPI backend. User-facing brand is "EarlyBell" — internal code still uses `foega` in CSS variable names (`--foega-primary-color`) and localStorage key (`foega_watchlist`) to avoid breaking existing users.
 
 ## Development Commands
 
