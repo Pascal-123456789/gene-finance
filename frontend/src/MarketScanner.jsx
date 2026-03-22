@@ -124,8 +124,9 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
     return match;
   };
 
-  const formatDetail = (value, decimals = 2) => {
-    if (value === undefined || value === null || value === 0) return '—';
+  const formatDetail = (value, decimals = 2, showZero = false) => {
+    if (value === undefined || value === null) return '—';
+    if (value === 0) return showZero ? '0' : '—';
     if (Number.isInteger(value) || decimals === 0) return value.toLocaleString();
     return Number(value).toFixed(decimals);
   };
@@ -366,11 +367,11 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                     <h4>Social</h4>
                     <div className="detail-grid">
                       <span className="detail-key">Mentions</span>
-                      <span className="detail-val">{formatDetail(alert.social_mentions, 0)}</span>
+                      <span className="detail-val">{formatDetail(alert.social_mentions, 0, true)}</span>
                       <span className="detail-key">Rank</span>
-                      <span className="detail-val">{formatDetail(alert.social_rank, 0)}</span>
+                      <span className="detail-val">{formatDetail(alert.social_rank, 0, true)}</span>
                       <span className="detail-key">Upvotes</span>
-                      <span className="detail-val">{formatDetail(alert.social_upvotes, 0)}</span>
+                      <span className="detail-val">{formatDetail(alert.social_upvotes, 0, true)}</span>
                     </div>
                   </div>
                 </div>
