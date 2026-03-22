@@ -86,9 +86,33 @@
 .mover-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+  align-items: flex-start;
+  margin-bottom: 8px;
   padding-top: 5px;
+}
+
+.mover-header-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.mover-company-name {
+  font-size: 0.8em;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* Meta row: sector + cap badge */
+.mover-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.mover-sector-label {
+  font-size: 0.75em;
+  color: #666;
 }
 
 .mover-ticker {

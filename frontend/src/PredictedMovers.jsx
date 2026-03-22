@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import TICKER_DATA from './tickerData';
 import './PredictedMovers.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -104,9 +105,23 @@ const PredictedMovers = () => {
             {movers.map((mover) => (
               <div key={mover.ticker} className={getLabelClass(mover.label)}>
                 <div className="mover-header">
-                  <h2 className="mover-ticker">{mover.ticker}</h2>
+                  <div className="mover-header-left">
+                    <h2 className="mover-ticker">{mover.ticker}</h2>
+                    {TICKER_DATA[mover.ticker] && (
+                      <span className="mover-company-name">{TICKER_DATA[mover.ticker].name}</span>
+                    )}
+                  </div>
                   <span className="mover-score">{mover.mover_score.toFixed(1)}</span>
                 </div>
+
+                {TICKER_DATA[mover.ticker] && (
+                  <div className="mover-meta-row">
+                    <span className="mover-sector-label">{TICKER_DATA[mover.ticker].sector}</span>
+                    <span className={`mover-cap-badge cap-${TICKER_DATA[mover.ticker].cap.split(' ')[0].toLowerCase()}`}>
+                      {TICKER_DATA[mover.ticker].cap}
+                    </span>
+                  </div>
+                )}
 
                 <div className="mover-label-badge">{mover.label}</div>
 

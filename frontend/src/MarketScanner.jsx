@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { FaInfoCircle } from 'react-icons/fa';
+import TICKER_DATA from './tickerData';
 import './MarketScanner.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -229,14 +230,28 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                 onClick={() => { setSelectedAlert(alert); fetchHistory(alert.ticker); }}
               >
                 <div className="alert-header">
-                  <h2 className="alert-ticker">
-                    {getEmoji(alert.alert_level)} {alert.ticker}
-                  </h2>
+                  <div className="alert-header-left">
+                    <h2 className="alert-ticker">
+                      {getEmoji(alert.alert_level)} {alert.ticker}
+                    </h2>
+                    {TICKER_DATA[alert.ticker] && (
+                      <span className="alert-company-name">{TICKER_DATA[alert.ticker].name}</span>
+                    )}
+                  </div>
                   <span className="alert-score" title="Weighted score: 40% options flow + 35% volume spike + 25% social buzz">
                     {(alert.alert_score || alert.early_warning_score || 0).toFixed(1)}
                     <FaInfoCircle className="score-info-icon" />
                   </span>
                 </div>
+
+                {TICKER_DATA[alert.ticker] && (
+                  <div className="alert-meta-row">
+                    <span className="alert-sector-label">{TICKER_DATA[alert.ticker].sector}</span>
+                    <span className={`alert-cap-badge cap-${TICKER_DATA[alert.ticker].cap.split(' ')[0].toLowerCase()}`}>
+                      {TICKER_DATA[alert.ticker].cap}
+                    </span>
+                  </div>
+                )}
 
                 <div className="price-info">
                   <span className="current-price">
