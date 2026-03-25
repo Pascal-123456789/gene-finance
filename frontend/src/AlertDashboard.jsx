@@ -142,6 +142,12 @@ const AlertDashboard = () => {
                   );
                 })()}
 
+                {alert.insider_purchases_30d > 0 && (
+                  <div className="alert-insider-badge">
+                    <span>&#127974;</span> {alert.insider_purchases_30d} insider purchase{alert.insider_purchases_30d !== 1 ? 's' : ''}
+                  </div>
+                )}
+
                 <div className="alert-signals">
                   <div className="signal-item">
                     <span className="signal-label">Options</span>
@@ -227,6 +233,12 @@ const AlertDashboard = () => {
       Click refresh to load detailed metrics
     </p>
   )}
+</div>
+
+<div className="modal-section">
+  <h3>&#127974; Insider Buying (Form 4)</h3>
+  <p>Score: {selectedAlert.insider_score ?? 0}/10</p>
+  <p>Purchases (30d): {selectedAlert.insider_purchases_30d ?? 0}</p>
 </div>
 
             <div className="modal-footer">

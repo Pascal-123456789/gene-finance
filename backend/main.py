@@ -806,6 +806,8 @@ async def scan_for_alerts():
                     "social_mentions": item["social_signal"].get("mentions") or 0,
                     "social_rank": item["social_signal"].get("rank") or 0,
                     "social_upvotes": item["social_signal"].get("upvotes") or 0,
+                    "insider_score": item.get("insider_signal", {}).get("score", 0),
+                    "insider_purchases_30d": item.get("insider_signal", {}).get("purchases_30d", 0),
                     "earnings_date": item.get("earnings_date"),
                     "earnings_time": item.get("earnings_time"),
                 })

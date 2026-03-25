@@ -168,6 +168,21 @@
   border: 1px solid rgba(255, 152, 0, 0.3);
 }
 
+/* Insider Buying Badge */
+.alert-insider-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8em;
+  font-weight: 600;
+  margin-bottom: 12px;
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
 /* Alert Signals */
 .alert-signals {
   display: flex;
