@@ -760,6 +760,32 @@ async def scan_for_alerts():
             item["current_price"] = 0
             item["price_change_pct"] = 0
 
+        # Fetch insider signal AFTER price (avoids 48 SEC EDGAR calls exhausting yfinance)
+        try:
+            insider_data = await detector.get_insider_signal(ticker)
+        except Exception as e:
+            print(f"Insider signal failed for {ticker}: {e}")
+            insider_data = {"score": 0, "signal": "NO_DATA", "purchases_30d": 0,
+                            "total_buy_volume_usd": 0, "unusual_insider_buying": False}
+        item["insider_signal"] = insider_data
+
+        # Fold insider's 10% weight into the score (analyze_ticker used 0 as placeholder)
+        insider_score = insider_data.get("score", 0)
+        item["early_warning_score"] = round(item["early_warning_score"] + 0.10 * insider_score, 2)
+        if insider_data.get("unusual_insider_buying", False):
+            item["signals_triggered"] = item.get("signals_triggered", 0) + 1
+        score, st = item["early_warning_score"], item["signals_triggered"]
+        if score >= 7.5 and st >= 2:
+            item["alert_level"] = "CRITICAL"
+        elif score >= 6.0 or st >= 2:
+            item["alert_level"] = "HIGH"
+        elif score >= 4.0:
+            item["alert_level"] = "MEDIUM"
+        else:
+            item["alert_level"] = "LOW"
+
+        await asyncio.sleep(0.5)
+
     # Log sentiment results summary
     with_news = [i for i in results if i.get("news_count", 0) > 0]
     print(f"FINNHUB SUMMARY: {len(with_news)}/{len(results)} tickers had news articles, {finnhub_errors} errors")

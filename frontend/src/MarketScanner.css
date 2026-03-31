@@ -456,6 +456,10 @@
   background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
 }
 
+.signal-fill.insider {
+  background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%);
+}
+
 .signal-row .signal-value {
   min-width: 40px;
   text-align: right;

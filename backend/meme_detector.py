@@ -553,11 +553,9 @@ class MemeStockDetector:
         options_data = self.get_options_signal(ticker)
         volume_data = self.get_volume_signal(ticker)
         social_data = await self.get_social_signal(ticker)
-        try:
-            insider_data = await self.get_insider_signal(ticker)
-        except Exception as e:
-            print(f"Insider signal failed for {ticker}, defaulting to 0: {e}")
-            insider_data = self._default_insider_result()
+        # Insider signal is fetched in scan_for_alerts() after price data,
+        # to avoid 48 sequential EDGAR calls exhausting yfinance resources.
+        insider_data = self._default_insider_result()
 
         # Calculate weighted score
         options_score = options_data['score']

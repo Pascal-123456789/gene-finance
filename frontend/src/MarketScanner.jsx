@@ -296,11 +296,12 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
 
                 <div className="price-info">
                   <span className="current-price">
-                    ${(alert.current_price || 0).toFixed(2)}
+                    {alert.current_price ? `$${alert.current_price.toFixed(2)}` : '--'}
                   </span>
                   <span className={`price-change ${getPriceChangeClass(alert.price_change_pct || 0)}`}>
-                    {(alert.price_change_pct || 0) > 0 ? '+' : ''}
-                    {(alert.price_change_pct || 0).toFixed(2)}%
+                    {alert.current_price
+                      ? `${(alert.price_change_pct || 0) > 0 ? '+' : ''}${(alert.price_change_pct || 0).toFixed(2)}%`
+                      : '--'}
                   </span>
                 </div>
 
@@ -374,6 +375,14 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                     </span>
                     <span className="signal-value">{alert.social_score || 0}/10</span>
                   </div>
+
+                  <div className="signal-row" title="SEC Form 4 insider purchases in last 30 days — high = executives buying their own stock">
+                    <span className="signal-label">Insider</span>
+                    <span className="signal-bar">
+                      <div className="signal-fill insider" style={{width: `${(alert.insider_score || 0) * 10}%`}}/>
+                    </span>
+                    <span className="signal-value">{alert.insider_score || 0}/10</span>
+                  </div>
                 </div>
 
                 <div className="signals-triggered">
@@ -382,9 +391,10 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                       (alert.options_score || 0) >= 3,
                       (alert.volume_score || 0) >= 3,
                       (alert.social_score || 0) >= 3,
+                      (alert.insider_score || 0) >= 3,
                     ].filter(Boolean).length;
                     if (firing === 0) return 'No unusual activity';
-                    if (firing === 3) return 'All signals firing';
+                    if (firing === 4) return 'All signals firing';
                     return `${firing} signal${firing > 1 ? 's' : ''} firing`;
                   })()}
                 </div>
@@ -480,11 +490,14 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
               <h3>📊 Overview</h3>
               <p>Alert Score: {(selectedAlert.alert_score || 0).toFixed(2)}/10</p>
               <p>Alert Level: <span className={`alert-level-${(selectedAlert.alert_level || 'LOW').toLowerCase()}`}>{selectedAlert.alert_level}</span></p>
-              <p>Price: ${(selectedAlert.current_price || 0).toFixed(2)} 
-                <span className={getPriceChangeClass(selectedAlert.price_change_pct || 0)}>
-                  {' '}({(selectedAlert.price_change_pct || 0) > 0 ? '+' : ''}{(selectedAlert.price_change_pct || 0).toFixed(2)}%)
-                </span>
-              </p>
+              <p>Price: {selectedAlert.current_price
+                ? <>
+                    ${selectedAlert.current_price.toFixed(2)}
+                    <span className={getPriceChangeClass(selectedAlert.price_change_pct || 0)}>
+                      {' '}({(selectedAlert.price_change_pct || 0) > 0 ? '+' : ''}{(selectedAlert.price_change_pct || 0).toFixed(2)}%)
+                    </span>
+                  </>
+                : '--'}</p>
             </div>
 
             <div className="modal-section">
@@ -500,6 +513,12 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
             <div className="modal-section">
               <h3>💬 Social Buzz (Reddit/WSB)</h3>
               <p>Score: {selectedAlert.social_score || 0}/10</p>
+            </div>
+
+            <div className="modal-section">
+              <h3>🏛️ Insider Buying (SEC Form 4)</h3>
+              <p>Score: {selectedAlert.insider_score || 0}/10</p>
+              <p>Purchases (30d): {selectedAlert.insider_purchases_30d || 0}</p>
             </div>
 
             <div className="modal-section">
