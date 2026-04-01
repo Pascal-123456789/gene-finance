@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaLock, FaBars, FaRocket, FaStar, FaTh, FaEnvelope, FaInfoCircle, FaChartLine, FaNewspaper } from 'react-icons/fa';
+import { FaFire, FaLock, FaBars, FaStar, FaEnvelope, FaInfoCircle, FaChartLine, FaNewspaper } from 'react-icons/fa';
+import Scanner from './Scanner';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
 import WatchlistView from './WatchlistView';
@@ -144,7 +145,7 @@ const TickerDetailModal = ({ modalData, modalLoading, modalError, setModalData, 
 export default function App() {
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 768);
     const isFirstVisit = !localStorage.getItem('earlybell_visited');
-    const [currentView, setCurrentView] = useState(isFirstVisit ? 'welcome' : 'dashboard');
+    const [currentView, setCurrentView] = useState(isFirstVisit ? 'welcome' : 'scanner');
     const [modalData, setModalData] = useState(null);
     const [modalLoading, setModalLoading] = useState(false);
     const [modalError, setModalError] = useState(null);
@@ -183,7 +184,7 @@ export default function App() {
 
     const handleEnterScanner = () => {
         localStorage.setItem('earlybell_visited', 'true');
-        setCurrentView('dashboard');
+        setCurrentView('scanner');
     };
 
     const aboutContent = (
@@ -233,22 +234,18 @@ export default function App() {
                         </div>
                     </>
                 );
-            case 'dashboard':
-                return <MarketScanner polymarketEvents={polymarketEvents} />;
-            case 'movers':
-                return <PredictedMovers />;
-            case 'watchlist':
-                return <WatchlistView />;
-            case 'heatmap':
-                return <HeatmapView onTickerClick={fetchTickerDetails} />;
-            case 'history':
-                return <AlertHistoryView />;
+            case 'scanner':
+                return <Scanner polymarketEvents={polymarketEvents} onTickerClick={fetchTickerDetails} />;
             case 'news':
                 return <NewsIntelligence />;
-            case 'premium':
-                return <PremiumAccess />;
+            case 'history':
+                return <AlertHistoryView />;
+            case 'watchlist':
+                return <WatchlistView />;
             case 'about':
                 return aboutContent;
+            case 'premium':
+                return <PremiumAccess />;
             default:
                 return null;
         }
@@ -265,17 +262,9 @@ export default function App() {
                         </button>
                     </div>
                     <nav className="nav-menu">
-                        <div className={`nav-item ${currentView === 'dashboard' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('dashboard')}>
-                            <FaFire /> <span>Market Scanner</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'movers' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('movers')}>
-                            <FaRocket /> <span>Predicted Movers</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'heatmap' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('heatmap')}>
-                            <FaTh /> <span>Heatmap</span>
+                        <div className={`nav-item ${currentView === 'scanner' ? 'active' : ''}`}
+                             onClick={() => setCurrentView('scanner')}>
+                            <FaFire /> <span>Scanner</span>
                         </div>
                         <div className={`nav-item ${currentView === 'news' ? 'active' : ''}`}
                              onClick={() => setCurrentView('news')}>
