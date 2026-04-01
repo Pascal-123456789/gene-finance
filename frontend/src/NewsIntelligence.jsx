@@ -6,7 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 const SENTIMENT_CLS = {
   BULLISH: 'bullish',
   BEARISH: 'bearish',
-  MIXED: 'mixed',
+  MIXED:   'mixed',
   NEUTRAL: 'neutral',
 };
 
@@ -14,7 +14,7 @@ const DIRECTION_CFG = {
   POSITIVE: { arrow: '▲', cls: 'positive' },
   NEGATIVE: { arrow: '▼', cls: 'negative' },
   NEUTRAL:  { arrow: '→', cls: 'neutral' },
-  MIXED:    { arrow: '↔', cls: 'mixed' },
+  MIXED:    { arrow: '↕', cls: 'mixed' },
 };
 
 function formatAge(ts) {
@@ -29,18 +29,22 @@ function formatAge(ts) {
 
 const LoadingSkeleton = () => (
   <div className="content-area news-intelligence">
-    <div className="ni-header skeleton-box" style={{ height: 140 }} />
+    <div className="ni-header skeleton-box" style={{ height: 48 }} />
     <div className="ni-section">
-      <div className="skeleton-box" style={{ height: 24, width: 160, marginBottom: 14 }} />
+      <div className="skeleton-box" style={{ height: 11, width: 120, marginBottom: 12 }} />
+      <div className="skeleton-box" style={{ height: 80 }} />
+    </div>
+    <div className="ni-section">
+      <div className="skeleton-box" style={{ height: 11, width: 100, marginBottom: 12 }} />
       <div className="ni-sector-grid">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="skeleton-box" style={{ height: 110 }} />
+          <div key={i} className="skeleton-box" style={{ height: 90 }} />
         ))}
       </div>
     </div>
     <div className="ni-section">
-      <div className="skeleton-box" style={{ height: 24, width: 140, marginBottom: 14 }} />
-      <div className="skeleton-box" style={{ height: 200 }} />
+      <div className="skeleton-box" style={{ height: 11, width: 100, marginBottom: 12 }} />
+      <div className="skeleton-box" style={{ height: 180 }} />
     </div>
   </div>
 );
@@ -68,7 +72,7 @@ const NewsIntelligence = () => {
     return (
       <div className="content-area news-intelligence">
         <div className="ni-empty">
-          <h2>📰 News Radar</h2>
+          <h2>News Radar</h2>
           <p>{error || 'No data available yet.'}</p>
           <p className="ni-hint">News analysis runs automatically each hour alongside the market scan. Check back after the next scheduled update.</p>
         </div>
@@ -88,22 +92,23 @@ const NewsIntelligence = () => {
   return (
     <div className="content-area news-intelligence">
 
-      {/* ── Header banner: title + sentiment + meta ── */}
+      {/* ── Header ── */}
       <div className="ni-header">
-        <h1 className="ni-title">📰 News Radar</h1>
+        <span className="ni-title">NEWS RADAR</span>
         <div className="ni-header-meta">
           <span className={`ni-sentiment-pill ni-sentiment-${sentimentCls}`}>
             {data.overall_sentiment || 'NEUTRAL'}
           </span>
-          <span className="ni-timestamp">Updated {formatAge(data.recorded_at)}</span>
-          <span className="ni-headline-count">{data.headline_count || 0} headlines analyzed</span>
+          <span className="ni-meta-ts">
+            Updated {formatAge(data.recorded_at)} · {data.headline_count || 0} headlines analyzed
+          </span>
         </div>
       </div>
 
-      {/* ── Macro Summary card ── */}
+      {/* ── Market Narrative ── */}
       <section className="ni-section">
         <h2 className="ni-section-title">Market Narrative</h2>
-        <div className="ni-summary-card">
+        <div className="ni-narrative">
           <p className="ni-macro-summary">
             {data.macro_summary || <span className="ni-no-data">No summary available.</span>}
           </p>
@@ -127,13 +132,15 @@ const NewsIntelligence = () => {
             {sortedSectors.map((s, i) => {
               const cfg = DIRECTION_CFG[s.direction] || DIRECTION_CFG.NEUTRAL;
               return (
-                <div key={i} className={`ni-sector-card ni-sector-${cfg.cls}`}>
+                <div key={i} className="ni-sector-card">
                   <div className="ni-sector-header">
                     <span className="ni-sector-name">{s.sector}</span>
-                    <span className={`ni-sector-arrow ni-arrow-${cfg.cls}`}>{cfg.arrow}</span>
+                    <span className={`ni-dir-label ni-arrow-${cfg.cls}`}>
+                      {cfg.arrow} {s.direction}
+                    </span>
                   </div>
                   <p className="ni-sector-reason">{s.reason}</p>
-                  <span className={`ni-confidence ni-confidence-${(s.confidence || 'LOW').toLowerCase()}`}>
+                  <span className="ni-confidence">
                     {s.confidence}
                   </span>
                 </div>
