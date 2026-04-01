@@ -785,18 +785,23 @@ Headlines:
             timeout=30,
         )
         response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"].strip()
+        raw_content = response.json()["choices"][0]["message"]["content"]
+        print(f"NEWS INTELLIGENCE RAW RESPONSE ({len(raw_content)} chars): {raw_content[:600]}")
 
-        # Strip markdown code fences if the model included them
-        if content.startswith("```"):
-            content = content.split("```")[1]
-            if content.startswith("json"):
-                content = content[4:]
-        content = content.strip()
+        # Strip markdown code fences — Llama often adds them despite being told not to
+        text = raw_content.strip()
+        if text.startswith("```"):
+            parts = text.split("```")
+            text = parts[1] if len(parts) > 1 else text
+            if text.startswith("json"):
+                text = text[4:]
+        text = text.strip()
 
-        parsed = json.loads(content)
-        print(f"NEWS INTELLIGENCE: Analysis complete — sentiment={parsed.get('overall_sentiment')}, "
-              f"{len(parsed.get('sector_impacts', []))} sectors, {len(parsed.get('ticker_impacts', []))} tickers")
+        parsed = json.loads(text)
+        print(f"NEWS INTELLIGENCE PARSED: sentiment={parsed.get('overall_sentiment')}, "
+              f"{len(parsed.get('sector_impacts', []))} sectors, "
+              f"{len(parsed.get('ticker_impacts', []))} tickers, "
+              f"themes={parsed.get('macro_themes', [])}")
         return parsed
 
     except Exception as e:

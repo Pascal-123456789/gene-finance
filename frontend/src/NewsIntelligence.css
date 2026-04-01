@@ -5,28 +5,45 @@
 /* ── Header ── */
 .ni-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
   background: #1e293b;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px 24px;
   margin-bottom: 24px;
-  gap: 20px;
 }
 
 .ni-title {
   font-size: 1.6rem;
   font-weight: 700;
-  margin: 0 0 12px;
+  margin: 0;
   color: #f1f5f9;
+}
+
+.ni-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* ── Summary card ── */
+.ni-summary-card {
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 20px;
 }
 
 .ni-macro-summary {
   color: #cbd5e1;
-  line-height: 1.7;
+  line-height: 1.75;
   margin: 0 0 16px;
-  max-width: 680px;
   font-size: 0.95rem;
+}
+.ni-summary-card .ni-macro-summary:last-child {
+  margin-bottom: 0;
 }
 
 .ni-themes {
@@ -44,12 +61,12 @@
   letter-spacing: 0.02em;
 }
 
-.ni-header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  flex-shrink: 0;
+/* ── No data placeholder ── */
+.ni-no-data {
+  color: #475569;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding: 4px 0;
 }
 
 .ni-sentiment-pill {
@@ -68,6 +85,7 @@
 .ni-headline-count {
   color: #64748b;
   font-size: 0.8rem;
+  white-space: nowrap;
 }
 
 /* ── Sections ── */
@@ -305,12 +323,11 @@
 @media (max-width: 768px) {
   .ni-header {
     flex-direction: column;
-  }
-  .ni-header-right {
     align-items: flex-start;
+  }
+  .ni-header-meta {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 8px;
   }
   .ni-ticker-header,
   .ni-ticker-row {

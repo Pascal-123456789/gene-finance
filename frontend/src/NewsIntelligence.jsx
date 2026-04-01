@@ -88,18 +88,10 @@ const NewsIntelligence = () => {
   return (
     <div className="content-area news-intelligence">
 
-      {/* ── Header banner ── */}
+      {/* ── Header banner: title + sentiment + meta ── */}
       <div className="ni-header">
-        <div className="ni-header-left">
-          <h1 className="ni-title">📰 News Radar</h1>
-          <p className="ni-macro-summary">{data.macro_summary}</p>
-          <div className="ni-themes">
-            {(data.macro_themes || []).map((theme, i) => (
-              <span key={i} className="ni-theme-pill">{theme}</span>
-            ))}
-          </div>
-        </div>
-        <div className="ni-header-right">
+        <h1 className="ni-title">📰 News Radar</h1>
+        <div className="ni-header-meta">
           <span className={`ni-sentiment-pill ni-sentiment-${sentimentCls}`}>
             {data.overall_sentiment || 'NEUTRAL'}
           </span>
@@ -108,10 +100,29 @@ const NewsIntelligence = () => {
         </div>
       </div>
 
+      {/* ── Macro Summary card ── */}
+      <section className="ni-section">
+        <h2 className="ni-section-title">Market Narrative</h2>
+        <div className="ni-summary-card">
+          <p className="ni-macro-summary">
+            {data.macro_summary || <span className="ni-no-data">No summary available.</span>}
+          </p>
+          {(data.macro_themes || []).length > 0 && (
+            <div className="ni-themes">
+              {data.macro_themes.map((theme, i) => (
+                <span key={i} className="ni-theme-pill">{theme}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* ── Sector Impacts ── */}
-      {sortedSectors.length > 0 && (
-        <section className="ni-section">
-          <h2 className="ni-section-title">Sector Impacts</h2>
+      <section className="ni-section">
+        <h2 className="ni-section-title">Sector Impacts</h2>
+        {sortedSectors.length === 0 ? (
+          <p className="ni-no-data">No sector impacts identified in this analysis.</p>
+        ) : (
           <div className="ni-sector-grid">
             {sortedSectors.map((s, i) => {
               const cfg = DIRECTION_CFG[s.direction] || DIRECTION_CFG.NEUTRAL;
@@ -129,13 +140,15 @@ const NewsIntelligence = () => {
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* ── Ticker Impacts ── */}
-      {sortedTickers.length > 0 && (
-        <section className="ni-section">
-          <h2 className="ni-section-title">Ticker Impacts</h2>
+      <section className="ni-section">
+        <h2 className="ni-section-title">Ticker Impacts</h2>
+        {sortedTickers.length === 0 ? (
+          <p className="ni-no-data">No ticker impacts identified in this analysis.</p>
+        ) : (
           <div className="ni-ticker-table">
             <div className="ni-ticker-header">
               <span>Ticker</span>
@@ -165,8 +178,8 @@ const NewsIntelligence = () => {
               );
             })}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* ── Headlines collapsible ── */}
       <section className="ni-section">
