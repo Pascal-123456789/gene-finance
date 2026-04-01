@@ -559,27 +559,27 @@ class MemeStockDetector:
         social_score = social_data['score']
         insider_score = insider_data['score']
 
+        # Insider is a supplementary signal — excluded from the core score
+        # to avoid inflating alert levels. Core: 40% options + 35% volume + 25% social.
         weighted_score = (
-            0.37 * options_score +
-            0.32 * volume_score +
-            0.21 * social_score +
-            0.10 * insider_score
+            0.40 * options_score +
+            0.35 * volume_score +
+            0.25 * social_score
         )
 
-        # Count strong signals
+        # Only options, volume, social count toward "signals firing"
         signals_triggered = sum([
             options_data.get('unusual_activity', False),
             volume_data.get('unusual_volume', False),
             social_data.get('unusual_buzz', False),
-            insider_data.get('unusual_insider_buying', False)
         ])
 
-        # Determine alert level
-        if weighted_score >= 7.5 and signals_triggered >= 2:
+        # Determine alert level (score-only thresholds, no signals_triggered conditions)
+        if weighted_score >= 7.0:
             alert_level = "CRITICAL"
-        elif weighted_score >= 6.0 or signals_triggered >= 2:
+        elif weighted_score >= 5.0:
             alert_level = "HIGH"
-        elif weighted_score >= 4.0:
+        elif weighted_score >= 3.0:
             alert_level = "MEDIUM"
         else:
             alert_level = "LOW"

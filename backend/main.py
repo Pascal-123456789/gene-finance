@@ -907,17 +907,14 @@ async def scan_for_alerts():
                             "total_buy_volume_usd": 0, "unusual_insider_buying": False}
         item["insider_signal"] = insider_data
 
-        # Fold insider's 10% weight into the score (analyze_ticker used 0 as placeholder)
-        insider_score = insider_data.get("score", 0)
-        item["early_warning_score"] = round(item["early_warning_score"] + 0.10 * insider_score, 2)
-        if insider_data.get("unusual_insider_buying", False):
-            item["signals_triggered"] = item.get("signals_triggered", 0) + 1
-        score, st = item["early_warning_score"], item["signals_triggered"]
-        if score >= 7.5 and st >= 2:
+        # Insider is supplementary only — does not affect the core score or alert level.
+        # Core score is already final from meme_detector: 40% options + 35% volume + 25% social.
+        score = item["early_warning_score"]
+        if score >= 7.0:
             item["alert_level"] = "CRITICAL"
-        elif score >= 6.0 or st >= 2:
+        elif score >= 5.0:
             item["alert_level"] = "HIGH"
-        elif score >= 4.0:
+        elif score >= 3.0:
             item["alert_level"] = "MEDIUM"
         else:
             item["alert_level"] = "LOW"

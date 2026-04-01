@@ -391,10 +391,9 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                       (alert.options_score || 0) >= 3,
                       (alert.volume_score || 0) >= 3,
                       (alert.social_score || 0) >= 3,
-                      (alert.insider_score || 0) >= 3,
                     ].filter(Boolean).length;
                     if (firing === 0) return 'No unusual activity';
-                    if (firing === 4) return 'All signals firing';
+                    if (firing === 3) return 'All signals firing';
                     return `${firing} signal${firing > 1 ? 's' : ''} firing`;
                   })()}
                 </div>
