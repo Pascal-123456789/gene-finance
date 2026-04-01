@@ -368,7 +368,7 @@ const MarketScanner = ({ polymarketEvents = [] }) => {
                     <span className="signal-value">{alert.volume_score || 0}/10</span>
                   </div>
 
-                  <div className="signal-row" title="Reddit/WSB mention spike — high = retail crowd piling in">
+                  <div className="signal-row" title="Reddit/WSB mentions via ApeWisdom. Only tickers in Reddit's top 100 most-discussed receive a score — 0 means not currently trending.">
                     <span className="signal-label">Social</span>
                     <span className="signal-bar">
                       <div className="signal-fill social" style={{width: `${(alert.social_score ?? 0) * 10}%`}}/>

@@ -852,6 +852,9 @@ async def scan_for_alerts():
             if no_price:
                 print(f"WARNING: {len(no_price)} tickers had no price from yfinance (stored as NULL): {no_price}")
 
+            insider_nonzero = [(r["ticker"], r["insider_score"]) for r in records if r.get("insider_score", 0) > 0]
+            print(f"INSIDER DEBUG: {len(insider_nonzero)} tickers with non-zero insider score: {insider_nonzero}")
+
             response = supabase.table('meme_alerts').upsert(records, on_conflict='ticker').execute()
             print(f"SCAN COMPLETE: {len(records)} tickers written to meme_alerts | {len(no_price)} with NULL price | {len(results) - len(records)} failed to produce a result")
 
