@@ -256,9 +256,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Trending Now section divider in the ticker list */
+/* Section dividers in the ticker list */
 .sc-section-divider-row {
-  height: 24px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -266,6 +266,7 @@
   border-bottom: 1px solid #1a2740;
   margin: 2px 0;
   pointer-events: none;
+  user-select: none;
 }
 
 .sc-section-divider-row span {
@@ -274,6 +275,30 @@
   color: #334155;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+/* Category badges on dynamic ticker rows */
+.sc-cat-badge {
+  display: inline-block;
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-left: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.sc-cat-social {
+  background: rgba(249,115,22,0.1);
+  color: #f97316;
+}
+
+.sc-cat-mover {
+  background: rgba(56,189,248,0.1);
+  color: #38bdf8;
 }
 
 /* ── Divider ──────────────────────────────────────────────────────────────*/

@@ -102,17 +102,38 @@ CORE_TICKERS = [
     "JNJ", "XOM", "WMT",
 ]
 
-# Dynamic 25: filled from ApeWisdom top-100 each scan
-DYNAMIC_TICKER_COUNT = 25
+# Dynamic 25 = 12 social (ApeWisdom) + 13 price movers
+SOCIAL_COUNT = 12
+MOVER_COUNT  = 13
 
-FALLBACK_DYNAMIC = [
-    "SOFI", "PLTR", "GME", "AMC", "SNAP", "RBLX",
-    "UBER", "LYFT", "DASH", "SPOT", "ZM",
-    "WFC", "MS", "UNH", "PFE", "ABBV", "LLY",
-    "CVX", "COP", "SLB", "NKE", "MCD", "HD", "ABNB",
+EXCLUDED_ETFS = {"SPY", "QQQ", "VOO", "IWM", "GLD", "TLT", "VXX", "SQQQ", "TQQQ", "DIA", "VTI"}
+
+# Curated universe scanned for price movers (excludes CORE_TICKERS)
+MOVER_UNIVERSE = [
+    # Mega cap / S&P heavyweights
+    "ORCL", "ADBE", "CRM", "NOW", "SNOW", "PANW", "CRWD", "NET", "ZS", "DDOG",
+    "ABNB", "BKNG", "EXPE", "UBER", "LYFT", "DASH",
+    # Semiconductors extended
+    "AMAT", "LRCX", "KLAC", "MRVL", "ON", "SMCI", "ARM",
+    # Fintech / payments extended
+    "SQ", "SOFI", "NU", "AFRM", "UPST",
+    # Meme / retail favorites
+    "GME", "AMC", "PLTR", "RBLX", "SNAP", "ACHR",
+    # Healthcare / biotech
+    "UNH", "PFE", "ABBV", "LLY", "MRNA", "BNTX", "REGN", "ISRG",
+    # Energy
+    "CVX", "COP", "SLB", "OXY", "HAL",
+    # Consumer / retail
+    "NKE", "MCD", "SBUX", "TGT", "COST", "HD", "LOW",
+    # Finance extended
+    "WFC", "MS", "C", "USB", "SCHW",
+    # Growth / tech extended
+    "SPOT", "ZM", "SHOP", "MELI", "SE", "GRAB",
+    # Defense / industrials
+    "LMT", "RTX", "BA", "NOC", "GE", "CAT",
+    # Biotech wildcards
+    "SAVA", "BBIO", "RXRX", "APLS",
 ]
-
-EXCLUDED_ETFS = {"SPY", "QQQ", "VOO", "IWM", "GLD", "TLT", "VXX", "SQQQ", "TQQQ"}
 
 # ---------------------------
 # DATABASE LIFESPAN EVENTS
@@ -237,37 +258,95 @@ async def scheduled_update_loop():
 # DYNAMIC TICKER SELECTION
 # ---------------------------
 
-async def get_dynamic_tickers() -> list:
+async def get_price_movers(exclude: list, count: int = MOVER_COUNT) -> list:
     """
-    Fetches ApeWisdom top-100 and returns DYNAMIC_TICKER_COUNT tickers
-    not already in CORE_TICKERS, not ETFs, not crypto, not too short/long.
-    Falls back to FALLBACK_DYNAMIC if ApeWisdom is unavailable.
+    Fetches 1-day price change for all tickers in MOVER_UNIVERSE,
+    excludes any already in the provided list,
+    returns the top `count` by absolute % change.
     """
-    global detector
-    if not detector:
-        detector = MemeStockDetector()
     try:
-        aw_data = await detector.fetch_apewisdom_data()
-        core_set = set(CORE_TICKERS)
-        dynamic = []
-        for item in aw_data:
-            t = (item.get("ticker") or "").upper().strip()
-            if not t:
+        exclude_set = set(t.upper() for t in exclude)
+        candidates = [t for t in MOVER_UNIVERSE if t not in exclude_set]
+
+        loop = asyncio.get_event_loop()
+
+        def fetch_batch():
+            return yf.download(
+                candidates,
+                period="2d",
+                interval="1d",
+                group_by="ticker",
+                auto_adjust=True,
+                progress=False,
+                threads=True,
+            )
+
+        data = await loop.run_in_executor(None, fetch_batch)
+
+        results = []
+        for ticker in candidates:
+            try:
+                if ticker in data.columns.get_level_values(0):
+                    closes = data[ticker]["Close"].dropna()
+                    if len(closes) >= 2:
+                        pct = (closes.iloc[-1] - closes.iloc[-2]) / closes.iloc[-2] * 100
+                        results.append({"ticker": ticker, "pct_change": abs(float(pct))})
+            except Exception:
                 continue
-            if t in core_set or t in EXCLUDED_ETFS:
-                continue
-            if "-" in t or len(t) < 2 or len(t) > 5:
-                continue
-            dynamic.append(t)
-            if len(dynamic) >= DYNAMIC_TICKER_COUNT:
-                break
-        if not dynamic:
-            dynamic = list(FALLBACK_DYNAMIC)[:DYNAMIC_TICKER_COUNT]
-        print(f"DYNAMIC TICKERS ({len(dynamic)}): {dynamic}")
-        return dynamic
+
+        results.sort(key=lambda x: x["pct_change"], reverse=True)
+        top = [r["ticker"] for r in results[:count]]
+        print(f"PRICE MOVERS ({len(top)}): {top}")
+        return top
+
     except Exception as e:
-        print(f"get_dynamic_tickers failed ({e}), using fallback")
-        return list(FALLBACK_DYNAMIC)[:DYNAMIC_TICKER_COUNT]
+        print(f"PRICE MOVERS ERROR: {e}")
+        return []
+
+
+async def get_dynamic_tickers() -> tuple:
+    """
+    Returns (social_tickers, mover_tickers) — two lists filling the 25 dynamic slots.
+    social_tickers: top SOCIAL_COUNT from ApeWisdom trending.
+    mover_tickers:  top MOVER_COUNT from MOVER_UNIVERSE by absolute 1-day % change.
+    """
+    # --- Social tickers from ApeWisdom ---
+    social_tickers = []
+    try:
+        tmp_detector = MemeStockDetector()
+        ape_data = await tmp_detector.fetch_apewisdom_data()
+
+        exclude = set(CORE_TICKERS)
+        for item in ape_data:
+            t = (item.get("ticker") or "").upper().strip()
+            if (t and t not in exclude and t not in EXCLUDED_ETFS
+                    and "-" not in t and 2 <= len(t) <= 5):
+                social_tickers.append(t)
+                exclude.add(t)
+                if len(social_tickers) >= SOCIAL_COUNT:
+                    break
+        print(f"SOCIAL TICKERS ({len(social_tickers)}): {social_tickers}")
+    except Exception as e:
+        print(f"SOCIAL TICKERS ERROR: {e}")
+        social_tickers = [
+            "SOFI", "PLTR", "GME", "AMC", "SNAP", "RBLX",
+            "HOOD", "ZM", "SPOT", "ABNB", "MSTR", "RIVN",
+        ][:SOCIAL_COUNT]
+
+    # --- Price movers (exclude core + social already chosen) ---
+    already_chosen = list(CORE_TICKERS) + social_tickers
+    mover_tickers = await get_price_movers(exclude=already_chosen, count=MOVER_COUNT)
+
+    if not mover_tickers:
+        already_set = set(already_chosen)
+        fallback = [
+            "NKE", "WFC", "MS", "UNH", "PFE", "ABBV", "LLY",
+            "CVX", "COP", "SLB", "MCD", "HD", "COST",
+        ]
+        mover_tickers = [t for t in fallback if t not in already_set][:MOVER_COUNT]
+
+    print(f"MOVER TICKERS ({len(mover_tickers)}): {mover_tickers}")
+    return social_tickers, mover_tickers
 
 
 # ---------------------------
@@ -498,9 +577,10 @@ async def trending_hype():
         return CACHE["data"]
 
     # 2. Cache Miss: Proceed with expensive API calls
-    dynamic = await get_dynamic_tickers()
-    full_list = CORE_TICKERS + dynamic
-    print(f"Cache miss or expired. Starting sequential data collection for {len(full_list)} tickers...")
+    social_tickers, mover_tickers = await get_dynamic_tickers()
+    full_list = CORE_TICKERS + social_tickers + mover_tickers
+    print(f"Cache miss or expired. Starting sequential data collection for {len(full_list)} tickers "
+          f"({len(CORE_TICKERS)} core, {len(social_tickers)} social, {len(mover_tickers)} movers)...")
 
     raw_results = []
 
@@ -960,9 +1040,10 @@ async def scan_for_alerts():
     if not detector:
         detector = MemeStockDetector()
     
-    dynamic = await get_dynamic_tickers()
-    watchlist = CORE_TICKERS + dynamic
-    print(f"Scanning {len(watchlist)} tickers for unified alerts ({len(CORE_TICKERS)} core + {len(dynamic)} dynamic)...")
+    social_tickers, mover_tickers = await get_dynamic_tickers()
+    watchlist = CORE_TICKERS + social_tickers + mover_tickers
+    print(f"Scanning {len(watchlist)} tickers ({len(CORE_TICKERS)} core, "
+          f"{len(social_tickers)} social, {len(mover_tickers)} movers)...")
     
     # Get alert data (options + volume)
     results = await detector.scan_watchlist(watchlist)
@@ -1330,8 +1411,27 @@ async def get_confluences_history():
 
 @app.get("/config/tickers")
 async def config_tickers():
-    """Returns the core ticker list so the frontend can split core vs dynamic."""
-    return {"core": CORE_TICKERS}
+    """Returns the current ticker split by category from the latest scan data."""
+    core_set = set(CORE_TICKERS)
+    try:
+        response = supabase.table('meme_alerts').select('ticker').execute()
+        all_tickers = [r['ticker'] for r in (response.data or [])]
+        core    = [t for t in all_tickers if t in core_set]
+        dynamic = [t for t in all_tickers if t not in core_set]
+        # Split dynamic into social (first 12) and movers (remaining)
+        return {
+            "core":            core,
+            "social_trending": dynamic[:SOCIAL_COUNT],
+            "price_movers":    dynamic[SOCIAL_COUNT:],
+            "total":           len(all_tickers),
+        }
+    except Exception as e:
+        return {
+            "core":            CORE_TICKERS,
+            "social_trending": [],
+            "price_movers":    [],
+            "total":           len(CORE_TICKERS),
+        }
 
 
 # ==========================================

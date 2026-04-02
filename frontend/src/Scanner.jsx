@@ -76,7 +76,7 @@ function fmt(value, decimals = 2, showZero = false) {
 }
 
 // ── Left panel: single ticker row ─────────────────────────────────────────
-const TickerRow = React.memo(({ data, selected, onClick, rowRef, sortBy }) => {
+const TickerRow = React.memo(({ data, selected, onClick, rowRef, sortBy, badge }) => {
   const score    = data.alert_score || data.early_warning_score || 0;
   const pct      = data.price_change_pct || 0;
   const name     = TICKER_DATA[data.ticker]?.name || '';
@@ -99,7 +99,11 @@ const TickerRow = React.memo(({ data, selected, onClick, rowRef, sortBy }) => {
         style={{ background: data.alert_level === 'LOW' ? 'transparent' : LEVEL_COLOR[data.alert_level] }}
       />
       <span className="sc-row-ticker">{data.ticker}</span>
-      <span className="sc-row-name">{name}</span>
+      <span className="sc-row-name">
+        {name}
+        {badge === 'social' && <span className="sc-cat-badge sc-cat-social">SOCIAL</span>}
+        {badge === 'mover'  && <span className="sc-cat-badge sc-cat-mover">MOVER</span>}
+      </span>
       {showHype ? (
         <span className="sc-row-hype">
           {data.hype_score != null ? data.hype_score.toFixed(2) : '—'}
@@ -165,6 +169,7 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
   });
   const [isMobile, setIsMobile]               = useState(window.innerWidth < 768);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [tickerConfig, setTickerConfig] = useState(null); // {core, social_trending, price_movers}
 
   const rowRefs = useRef({});
   const listRef = useRef(null);
@@ -180,13 +185,14 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
   useEffect(() => {
     const load = async () => {
       try {
-        const [alertsRes, moversRes, hypeRes] = await Promise.all([
+        const [alertsRes, moversRes, hypeRes, configRes] = await Promise.all([
           fetch(`${API_BASE_URL}/alerts/cached`),
           fetch(`${API_BASE_URL}/movers/cached`),
           fetch(`${API_BASE_URL}/trending/cached_hype`),
+          fetch(`${API_BASE_URL}/config/tickers`),
         ]);
-        const [alerts, movers, hype] = await Promise.all([
-          alertsRes.json(), moversRes.json(), hypeRes.json(),
+        const [alerts, movers, hype, config] = await Promise.all([
+          alertsRes.json(), moversRes.json(), hypeRes.json(), configRes.json(),
         ]);
 
         const map = {};
@@ -214,6 +220,14 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
           });
         }
         setTickers(Object.values(map));
+
+        // Store ticker config for section dividers
+        if (config && Array.isArray(config.social_trending)) {
+          setTickerConfig({
+            social: new Set(config.social_trending),
+            movers: new Set(config.price_movers || []),
+          });
+        }
       } catch (err) {
         console.error('Scanner fetch error:', err);
       }
@@ -587,35 +601,57 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
           {sorted.length === 0 ? (
             <div className="sc-list-empty">No alerts match current filters.</div>
           ) : (() => {
-            const coreRows    = sorted.filter(t => CORE_TICKERS.has(t.ticker));
-            const dynamicRows = sorted.filter(t => !CORE_TICKERS.has(t.ticker));
+            // Three-section layout when config is available; single list as fallback
+            const hasSections = tickerConfig &&
+              (tickerConfig.social.size > 0 || tickerConfig.movers.size > 0);
+
+            const renderRow = (item, badge) => (
+              <TickerRow
+                key={item.ticker}
+                data={item}
+                selected={selectedTicker === item.ticker}
+                onClick={() => handleSelect(item)}
+                rowRef={el => { rowRefs.current[item.ticker] = el; }}
+                sortBy={sortBy}
+                badge={badge}
+              />
+            );
+
+            if (!hasSections) {
+              return sorted.map(item => renderRow(item, null));
+            }
+
+            // Sort within each section independently
+            const sortFn = (a, b) => {
+              switch (sortBy) {
+                case 'mover_score':  return (b.mover_score || 0) - (a.mover_score || 0);
+                case 'price_change': return Math.abs(b.price_change_pct || 0) - Math.abs(a.price_change_pct || 0);
+                case 'hype_score':   return (b.hype_score || 0) - (a.hype_score || 0);
+                default:             return (b.alert_score || b.early_warning_score || 0) - (a.alert_score || a.early_warning_score || 0);
+              }
+            };
+
+            const coreRows   = [...sorted.filter(t => CORE_TICKERS.has(t.ticker))].sort(sortFn);
+            const socialRows = [...sorted.filter(t => tickerConfig.social.has(t.ticker))].sort(sortFn);
+            const moverRows  = [...sorted.filter(t => tickerConfig.movers.has(t.ticker))].sort(sortFn);
+
             return (
               <>
-                {coreRows.map(item => (
-                  <TickerRow
-                    key={item.ticker}
-                    data={item}
-                    selected={selectedTicker === item.ticker}
-                    onClick={() => handleSelect(item)}
-                    rowRef={el => { rowRefs.current[item.ticker] = el; }}
-                    sortBy={sortBy}
-                  />
-                ))}
-                {dynamicRows.length > 0 && (
+                {coreRows.map(item => renderRow(item, null))}
+                {socialRows.length > 0 && (
                   <>
                     <div className="sc-section-divider-row">
-                      <span>TRENDING NOW</span>
+                      <span>TRENDING SOCIALLY</span>
                     </div>
-                    {dynamicRows.map(item => (
-                      <TickerRow
-                        key={item.ticker}
-                        data={item}
-                        selected={selectedTicker === item.ticker}
-                        onClick={() => handleSelect(item)}
-                        rowRef={el => { rowRefs.current[item.ticker] = el; }}
-                        sortBy={sortBy}
-                      />
-                    ))}
+                    {socialRows.map(item => renderRow(item, 'social'))}
+                  </>
+                )}
+                {moverRows.length > 0 && (
+                  <>
+                    <div className="sc-section-divider-row">
+                      <span>TOP MOVERS TODAY</span>
+                    </div>
+                    {moverRows.map(item => renderRow(item, 'mover'))}
                   </>
                 )}
               </>
