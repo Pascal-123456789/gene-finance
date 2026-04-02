@@ -229,7 +229,7 @@ export default function App() {
                         {aboutContent}
                         <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '40px' }}>
                             <button className="landing-button" onClick={handleEnterScanner}>
-                                Take Me to the Scanner 🔔
+                                Take Me to the Scanner
                             </button>
                         </div>
                     </>
@@ -292,7 +292,7 @@ export default function App() {
                             <FaEnvelope /> <span>Feedback</span>
                         </a>
                     </div>
-                    <div className="hype-indicator"><FaFire /> <span>Scanner Online</span></div>
+                    <div className="hype-indicator"><span className="online-dot" /> <span>Scanner Online</span></div>
                 </div>
             )}
 

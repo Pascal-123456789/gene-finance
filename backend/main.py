@@ -92,22 +92,27 @@ SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "")
 # --- RATE LIMIT ---
 FINNHUB_CALL_DELAY = 1.5 # ~40 calls/min, safely under Finnhub's 60/min limit
 
-# --- TICKERS (Separated for better normalization) ---
-STOCK_TICKERS = [
+# --- TICKERS ---
+# Core 25: always scanned — liquid, options-active, well-known
+CORE_TICKERS = [
     "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX",
     "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
-    "V", "MA", "PYPL", "COIN", "HOOD", "SOFI",
-    "GME", "AMC", "PLTR", "SNAP", "RBLX",
+    "V", "MA", "PYPL", "COIN", "HOOD",
+    "JPM", "BAC", "GS",
+    "JNJ", "XOM", "WMT",
+]
+
+# Dynamic 25: filled from ApeWisdom top-100 each scan
+DYNAMIC_TICKER_COUNT = 25
+
+FALLBACK_DYNAMIC = [
+    "SOFI", "PLTR", "GME", "AMC", "SNAP", "RBLX",
     "UBER", "LYFT", "DASH", "SPOT", "ZM",
-    "JPM", "BAC", "GS", "MS", "WFC",
-    "JNJ", "UNH", "PFE", "ABBV", "LLY",
-    "XOM", "CVX", "COP", "SLB",
-    "WMT", "HD", "NKE", "MCD",
+    "WFC", "MS", "UNH", "PFE", "ABBV", "LLY",
+    "CVX", "COP", "SLB", "NKE", "MCD", "HD", "ABNB",
 ]
-CRYPTO_TICKERS = [
-    "BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "DOGE-USD"
-]
-TICKER_LIST = STOCK_TICKERS + CRYPTO_TICKERS
+
+EXCLUDED_ETFS = {"SPY", "QQQ", "VOO", "IWM", "GLD", "TLT", "VXX", "SQQQ", "TQQQ"}
 
 # ---------------------------
 # DATABASE LIFESPAN EVENTS
@@ -227,6 +232,43 @@ async def scheduled_update_loop():
         # Wait for 1 hour (3600 seconds)
         await asyncio.sleep(3600)
         
+
+# ---------------------------
+# DYNAMIC TICKER SELECTION
+# ---------------------------
+
+async def get_dynamic_tickers() -> list:
+    """
+    Fetches ApeWisdom top-100 and returns DYNAMIC_TICKER_COUNT tickers
+    not already in CORE_TICKERS, not ETFs, not crypto, not too short/long.
+    Falls back to FALLBACK_DYNAMIC if ApeWisdom is unavailable.
+    """
+    global detector
+    if not detector:
+        detector = MemeStockDetector()
+    try:
+        aw_data = await detector.fetch_apewisdom_data()
+        core_set = set(CORE_TICKERS)
+        dynamic = []
+        for item in aw_data:
+            t = (item.get("ticker") or "").upper().strip()
+            if not t:
+                continue
+            if t in core_set or t in EXCLUDED_ETFS:
+                continue
+            if "-" in t or len(t) < 2 or len(t) > 5:
+                continue
+            dynamic.append(t)
+            if len(dynamic) >= DYNAMIC_TICKER_COUNT:
+                break
+        if not dynamic:
+            dynamic = list(FALLBACK_DYNAMIC)[:DYNAMIC_TICKER_COUNT]
+        print(f"DYNAMIC TICKERS ({len(dynamic)}): {dynamic}")
+        return dynamic
+    except Exception as e:
+        print(f"get_dynamic_tickers failed ({e}), using fallback")
+        return list(FALLBACK_DYNAMIC)[:DYNAMIC_TICKER_COUNT]
+
 
 # ---------------------------
 # HELPER FUNCTIONS (ASYNC DATA COLLECTION)
@@ -456,37 +498,27 @@ async def trending_hype():
         return CACHE["data"]
 
     # 2. Cache Miss: Proceed with expensive API calls
-    print(f"Cache miss or expired. Starting sequential data collection for {len(TICKER_LIST)} tickers...")
-    
+    dynamic = await get_dynamic_tickers()
+    full_list = CORE_TICKERS + dynamic
+    print(f"Cache miss or expired. Starting sequential data collection for {len(full_list)} tickers...")
+
     raw_results = []
-    
+
     # Use a sequential loop with delays to respect Finnhub's rate limit
-    for ticker in TICKER_LIST:
+    for ticker in full_list:
         try:
-            # We call the FastAPI endpoint for a single ticker, which calls the Finnhub API
             result = await get_hype_raw(ticker)
             if result:
                 raw_results.append(result)
-            
-            # The async_news_sentiment_and_volume already contains a sleep of 0.5s.
-            # We will add another 0.5s here just to be completely safe, totaling 1s per ticker.
-            # This is safer than relying on only the sleep inside the inner function.
             await asyncio.sleep(0.5)
-            
         except Exception as e:
             print(f"Error during sequential fetch for {ticker}: {type(e).__name__}: {e}")
-            continue # Continue to the next ticker
-    
+            continue
+
     successful_results = [r for r in raw_results if isinstance(r, dict) and "ticker" in r]
-    
-    # --- Separate and Score Data ---
-    stock_results = [r for r in successful_results if r["ticker"] in STOCK_TICKERS]
-    crypto_results = [r for r in successful_results if r["ticker"] in CRYPTO_TICKERS]
-    
-    scored_stocks = calculate_z_scores(stock_results)
-    scored_crypto = calculate_z_scores(crypto_results)
-    
-    results_scored = scored_stocks + scored_crypto
+
+    # Score all results together (all are stocks now — no crypto)
+    results_scored = calculate_z_scores(successful_results)
     results_sorted = sorted(results_scored, key=lambda x: x["hype_score"], reverse=True)
     # --- End Data Collection Logic ---
 
@@ -928,37 +960,9 @@ async def scan_for_alerts():
     if not detector:
         detector = MemeStockDetector()
     
-    # Expanded 50-ticker watchlist organized by sector
-    watchlist = [
-        # === MEGA CAP TECH (8) ===
-        "AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "NFLX",
-        
-        # === SEMICONDUCTORS (6) ===
-        "AMD", "INTC", "AVGO", "QCOM", "TSM", "MU",
-        
-        # === FINTECH & PAYMENTS (6) ===
-        "V", "MA", "PYPL", "COIN", "HOOD", "SOFI",
-        
-        # === MEME STOCKS (5) ===
-        "GME", "AMC", "PLTR", "SNAP", "RBLX",
-        
-        # === GROWTH TECH (6) ===
-        "UBER", "LYFT", "DASH", "SPOT", "ZM",
-        
-        # === FINANCE (5) ===
-        "JPM", "BAC", "GS", "MS", "WFC",
-        
-        # === HEALTHCARE (5) ===
-        "JNJ", "UNH", "PFE", "ABBV", "LLY",
-        
-        # === ENERGY (4) ===
-        "XOM", "CVX", "COP", "SLB",
-        
-        # === CONSUMER (4) ===
-        "WMT", "HD", "NKE", "MCD",
-    ]
-    
-    print(f"Scanning {len(watchlist)} tickers for unified alerts...")
+    dynamic = await get_dynamic_tickers()
+    watchlist = CORE_TICKERS + dynamic
+    print(f"Scanning {len(watchlist)} tickers for unified alerts ({len(CORE_TICKERS)} core + {len(dynamic)} dynamic)...")
     
     # Get alert data (options + volume)
     results = await detector.scan_watchlist(watchlist)
@@ -1324,6 +1328,12 @@ async def get_confluences_history():
         return {"error": str(e)}
 
 
+@app.get("/config/tickers")
+async def config_tickers():
+    """Returns the core ticker list so the frontend can split core vs dynamic."""
+    return {"core": CORE_TICKERS}
+
+
 # ==========================================
 # POLYMARKET INTEGRATION
 # ==========================================
@@ -1567,7 +1577,7 @@ async def debug_social():
     all_tickers = await detector.fetch_apewisdom_data()
 
     # Build a set of our watchlist tickers
-    our_tickers = set(STOCK_TICKERS)
+    our_tickers = set(CORE_TICKERS) | set(FALLBACK_DYNAMIC)
 
     # Find which of our tickers appear in ApeWisdom (exact match)
     exact_matches = {}

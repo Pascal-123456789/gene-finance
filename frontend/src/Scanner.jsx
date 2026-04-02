@@ -5,6 +5,15 @@ import './Scanner.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
+// Core tickers (always scanned, appear above the divider)
+const CORE_TICKERS = new Set([
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA', 'NFLX',
+  'AMD', 'INTC', 'AVGO', 'QCOM', 'TSM', 'MU',
+  'V', 'MA', 'PYPL', 'COIN', 'HOOD',
+  'JPM', 'BAC', 'GS',
+  'JNJ', 'XOM', 'WMT',
+]);
+
 // ── Design tokens ──────────────────────────────────────────────────────────
 const LEVEL_COLOR = {
   CRITICAL: '#ef4444',
@@ -20,10 +29,10 @@ const MOVER_COLOR = {
 };
 
 const SORT_LABELS = {
-  alert_score:  'Signal',
-  mover_score:  'Mover',
-  price_change: 'Price',
-  hype_score:   'Hype',
+  alert_score:  { label: 'Signal', title: '' },
+  mover_score:  { label: 'Mover',  title: '' },
+  price_change: { label: 'Price',  title: '' },
+  hype_score:   { label: 'Hype',   title: 'Sorted by Reddit/social mention Z-score' },
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -67,12 +76,13 @@ function fmt(value, decimals = 2, showZero = false) {
 }
 
 // ── Left panel: single ticker row ─────────────────────────────────────────
-const TickerRow = React.memo(({ data, selected, onClick, rowRef }) => {
-  const score = data.alert_score || data.early_warning_score || 0;
-  const pct   = data.price_change_pct || 0;
-  const name  = TICKER_DATA[data.ticker]?.name || '';
-  const barW  = Math.min(score / 10, 1) * 40;
+const TickerRow = React.memo(({ data, selected, onClick, rowRef, sortBy }) => {
+  const score    = data.alert_score || data.early_warning_score || 0;
+  const pct      = data.price_change_pct || 0;
+  const name     = TICKER_DATA[data.ticker]?.name || '';
+  const barW     = Math.min(score / 10, 1) * 40;
   const barColor = data.alert_level === 'LOW' ? '#1a2740' : LEVEL_COLOR[data.alert_level];
+  const showHype = sortBy === 'hype_score';
 
   return (
     <div
@@ -90,9 +100,15 @@ const TickerRow = React.memo(({ data, selected, onClick, rowRef }) => {
       />
       <span className="sc-row-ticker">{data.ticker}</span>
       <span className="sc-row-name">{name}</span>
-      <div className="sc-row-mini-track">
-        <div className="sc-row-mini-fill" style={{ width: barW, background: barColor }} />
-      </div>
+      {showHype ? (
+        <span className="sc-row-hype">
+          {data.hype_score != null ? data.hype_score.toFixed(2) : '—'}
+        </span>
+      ) : (
+        <div className="sc-row-mini-track">
+          <div className="sc-row-mini-fill" style={{ width: barW, background: barColor }} />
+        </div>
+      )}
       <span className="sc-row-score">{score.toFixed(1)}</span>
       <span className={`sc-row-pct sc-pct-${pct > 0 ? 'up' : pct < 0 ? 'dn' : 'flat'}`}>
         {pct > 0 ? '↑' : pct < 0 ? '↓' : ''}{Math.abs(pct).toFixed(2)}%
@@ -233,7 +249,11 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
   }, []);
 
   // ── Sort + filter ──
-  const filtered = showLow ? tickers : tickers.filter(t => t.alert_level !== 'LOW');
+  // Strip zero-data stale rows (belt-and-suspenders against Supabase ghost rows)
+  const nonZero = tickers.filter(
+    t => !(t.alert_score === 0 && t.price_change_pct === 0 && t.current_price === 0)
+  );
+  const filtered = showLow ? nonZero : nonZero.filter(t => t.alert_level !== 'LOW');
   const sorted = [...filtered].sort((a, b) => {
     switch (sortBy) {
       case 'mover_score':   return (b.mover_score || 0) - (a.mover_score || 0);
@@ -432,8 +452,8 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
             value={
               d.near_52w_high || d.near_round_number
                 ? <span className="sc-flag-group">
-                    {d.near_52w_high     && <span className="sc-flag">🏔 Near 52w High</span>}
-                    {d.near_round_number && <span className="sc-flag">🎯 Round Number</span>}
+                    {d.near_52w_high     && <span className="sc-flag">Near 52w High</span>}
+                    {d.near_round_number && <span className="sc-flag">Round Number</span>}
                   </span>
                 : <span className="sc-flag-none">—</span>
             }
@@ -447,12 +467,10 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
         <div className="sc-stat-blocks">
           <StatBlock
             label="Sentiment Score"
-            value={
-              <span>
-                {(d.sentiment_score || 0).toFixed(3)}{' '}
-                <span style={{ fontSize: '0.9em' }}>
-                  {(d.sentiment_score || 0) > 0.5 ? '😊' : (d.sentiment_score || 0) > 0.2 ? '🙂' : (d.sentiment_score || 0) > -0.2 ? '😐' : (d.sentiment_score || 0) > -0.5 ? '😟' : '😢'}
-                </span>
+            value={(d.sentiment_score || 0).toFixed(3)}
+            sub={
+              <span style={{ color: (d.sentiment_score || 0) > 0.2 ? '#22c55e' : (d.sentiment_score || 0) < -0.2 ? '#ef4444' : '#64748b' }}>
+                {(d.sentiment_score || 0) > 0.2 ? 'positive' : (d.sentiment_score || 0) < -0.2 ? 'negative' : 'neutral'}
               </span>
             }
           />
@@ -543,11 +561,12 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
         {/* Controls */}
         <div className="sc-controls-row">
           <div className="sc-sort-pills" role="group" aria-label="Sort by">
-            {Object.entries(SORT_LABELS).map(([key, label]) => (
+            {Object.entries(SORT_LABELS).map(([key, { label, title }]) => (
               <button
                 key={key}
                 className={`sc-pill${sortBy === key ? ' sc-pill--active' : ''}`}
                 onClick={() => setSortBy(key)}
+                title={title || undefined}
               >
                 {label}
               </button>
@@ -567,17 +586,41 @@ const Scanner = ({ polymarketEvents = [], onTickerClick }) => {
         <div className="sc-ticker-list" ref={listRef} role="listbox" aria-label="Tickers">
           {sorted.length === 0 ? (
             <div className="sc-list-empty">No alerts match current filters.</div>
-          ) : (
-            sorted.map(item => (
-              <TickerRow
-                key={item.ticker}
-                data={item}
-                selected={selectedTicker === item.ticker}
-                onClick={() => handleSelect(item)}
-                rowRef={el => { rowRefs.current[item.ticker] = el; }}
-              />
-            ))
-          )}
+          ) : (() => {
+            const coreRows    = sorted.filter(t => CORE_TICKERS.has(t.ticker));
+            const dynamicRows = sorted.filter(t => !CORE_TICKERS.has(t.ticker));
+            return (
+              <>
+                {coreRows.map(item => (
+                  <TickerRow
+                    key={item.ticker}
+                    data={item}
+                    selected={selectedTicker === item.ticker}
+                    onClick={() => handleSelect(item)}
+                    rowRef={el => { rowRefs.current[item.ticker] = el; }}
+                    sortBy={sortBy}
+                  />
+                ))}
+                {dynamicRows.length > 0 && (
+                  <>
+                    <div className="sc-section-divider-row">
+                      <span>TRENDING NOW</span>
+                    </div>
+                    {dynamicRows.map(item => (
+                      <TickerRow
+                        key={item.ticker}
+                        data={item}
+                        selected={selectedTicker === item.ticker}
+                        onClick={() => handleSelect(item)}
+                        rowRef={el => { rowRefs.current[item.ticker] = el; }}
+                        sortBy={sortBy}
+                      />
+                    ))}
+                  </>
+                )}
+              </>
+            );
+          })()}
         </div>
 
       </div>
