@@ -49,6 +49,28 @@ function formatArticleTs(unixSecs) {
   return `${Math.round(hrs / 24)}d ago`;
 }
 
+// Group confluences by detected_at — rows within 5 minutes of each other are one scan.
+function groupByScan(confluences) {
+  if (!confluences.length) return [];
+  const sorted = [...confluences].sort(
+    (a, b) => new Date(b.detected_at) - new Date(a.detected_at)
+  );
+  const groups = [];
+  let current = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = new Date(current[0].detected_at).getTime();
+    const curr = new Date(sorted[i].detected_at).getTime();
+    if (Math.abs(prev - curr) <= 5 * 60 * 1000) {
+      current.push(sorted[i]);
+    } else {
+      groups.push(current);
+      current = [sorted[i]];
+    }
+  }
+  groups.push(current);
+  return groups; // array of arrays, each array is one scan batch
+}
+
 // ── Skeleton ───────────────────────────────────────────────────────────────
 const LoadingSkeleton = () => (
   <div className="ni-page">
@@ -69,18 +91,80 @@ const LoadingSkeleton = () => (
   </div>
 );
 
+// ── Confluence row ─────────────────────────────────────────────────────────
+const ConfluenceRow = ({ c, muted = false }) => {
+  const typeCfg = CONFLUENCE_TYPE[c.type] || CONFLUENCE_TYPE.CONFIRMED;
+  const dirCls  = DIR_CLS[c.direction]  || 'dir-neutral';
+  const dirArr  = DIR_ARROW[c.direction] || '→';
+
+  return (
+    <div className={`ni-conf-row${muted ? ' ni-conf-row--muted' : ''}`}>
+      <div className="ni-conf-left">
+        <span className={`ni-type-badge ${typeCfg.cls}`}>{typeCfg.label}</span>
+        <div className="ni-conf-ticker-row">
+          <span className="ni-conf-ticker">{c.ticker}</span>
+          <span className={`ni-conf-dir ${dirCls}`}>{dirArr}</span>
+        </div>
+      </div>
+
+      <div className="ni-conf-body">
+        <span className="ni-conf-headline">{c.headline}</span>
+        {c.insight && <span className="ni-conf-insight">{c.insight}</span>}
+        {c.signal_context && <span className="ni-conf-context">{c.signal_context}</span>}
+      </div>
+
+      <div className="ni-conf-right">
+        <span className="ni-conf-score">{(c.signal_score || 0).toFixed(1)}</span>
+        {c.confidence && <span className="ni-conf-confidence">{c.confidence}</span>}
+        {c.detected_at && (
+          <span className="ni-conf-detected">{formatAge(c.detected_at)}</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── Grouped confluence list ────────────────────────────────────────────────
+const ConfluenceList = ({ confluences, muted = false }) => {
+  const groups = groupByScan(confluences);
+  return (
+    <div className="ni-conf-list">
+      {groups.map((group, gi) => (
+        <React.Fragment key={gi}>
+          {gi > 0 && (
+            <div className="ni-scan-divider">
+              Detected {formatAge(group[0].detected_at)}
+            </div>
+          )}
+          {group.map((c, ci) => (
+            <ConfluenceRow key={`${gi}-${ci}`} c={c} muted={muted} />
+          ))}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────────────
 const NewsIntelligence = () => {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
+  const [intel, setIntel]             = useState(null);
+  const [activeConf, setActiveConf]   = useState([]);
+  const [historyConf, setHistoryConf] = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [confTab, setConfTab]         = useState('active'); // 'active' | 'today'
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/news/intelligence`)
-      .then(res => res.json())
-      .then(json => {
-        if (json.error) setError(json.error);
-        else setData(json);
+    Promise.all([
+      fetch(`${API_BASE_URL}/news/intelligence`).then(r => r.json()),
+      fetch(`${API_BASE_URL}/news/confluences`).then(r => r.json()),
+      fetch(`${API_BASE_URL}/news/confluences/history`).then(r => r.json()),
+    ])
+      .then(([intelData, activeData, histData]) => {
+        if (intelData.error) setError(intelData.error);
+        else setIntel(intelData);
+        setActiveConf(Array.isArray(activeData) ? activeData : []);
+        setHistoryConf(Array.isArray(histData) ? histData : []);
       })
       .catch(() => setError('Failed to load news intelligence.'))
       .finally(() => setLoading(false));
@@ -88,7 +172,7 @@ const NewsIntelligence = () => {
 
   if (loading) return <LoadingSkeleton />;
 
-  if (error || !data) {
+  if (error || !intel) {
     return (
       <div className="ni-page">
         <div className="ni-header">
@@ -102,12 +186,21 @@ const NewsIntelligence = () => {
     );
   }
 
-  const sentimentCls = SENTIMENT_CLS[data.overall_sentiment] || 'sent-neutral';
-  const confluences  = data.confluences    || [];
-  const rotation     = data.sector_rotation || [];
-  const flags        = data.watchlist_flags || [];
-  const headlines    = data.headlines       || [];
-  const themes       = data.macro_themes    || [];
+  const sentimentCls = SENTIMENT_CLS[intel.overall_sentiment] || 'sent-neutral';
+  const rotation     = intel.sector_rotation  || [];
+  const flags        = intel.watchlist_flags  || [];
+  const headlines    = intel.headlines         || [];
+  const themes       = intel.macro_themes      || [];
+
+  const displayedConf = confTab === 'active' ? activeConf : historyConf;
+  const hasActive     = activeConf.length > 0;
+  const hasHistory    = historyConf.length > 0;
+
+  // "Active" shows non-expired; if none, show most-recent expired ones muted
+  const showFallback  = confTab === 'active' && !hasActive && hasHistory;
+  const fallbackConf  = showFallback
+    ? historyConf.slice(0, Math.min(historyConf.length, 8))
+    : [];
 
   return (
     <div className="ni-page">
@@ -117,18 +210,18 @@ const NewsIntelligence = () => {
         <span className="ni-title">NEWS RADAR</span>
         <div className="ni-header-right">
           <span className={`ni-sentiment-pill ${sentimentCls}`}>
-            {data.overall_sentiment || 'NEUTRAL'}
+            {intel.overall_sentiment || 'NEUTRAL'}
           </span>
           <span className="ni-meta-ts">
-            Updated {formatAge(data.recorded_at)} · {data.headline_count || 0} headlines analyzed
+            Updated {formatAge(intel.recorded_at)} · {intel.headline_count || 0} headlines analyzed
           </span>
         </div>
       </div>
 
       {/* ── Macro narrative ── */}
-      {data.macro_summary && (
+      {intel.macro_summary && (
         <div className="ni-narrative-block">
-          <p className="ni-macro-text">{data.macro_summary}</p>
+          <p className="ni-macro-text">{intel.macro_summary}</p>
           {themes.length > 0 && (
             <div className="ni-themes">
               {themes.map((t, i) => <span key={i} className="ni-theme-pill">{t}</span>)}
@@ -141,51 +234,46 @@ const NewsIntelligence = () => {
           SIGNAL × CATALYST CONFLUENCES
       ════════════════════════════════════════ */}
       <div className="ni-section">
-        <div className="ni-section-label">SIGNAL x CATALYST CONFLUENCES</div>
-
-        {confluences.length === 0 ? (
-          <div className="ni-no-confluences">
-            No confluences detected this hour — signals and news are not overlapping
+        <div className="ni-conf-section-header">
+          <div className="ni-section-label">SIGNAL x CATALYST CONFLUENCES</div>
+          <div className="ni-conf-tabs">
+            <button
+              className={`ni-conf-tab${confTab === 'active' ? ' ni-conf-tab--active' : ''}`}
+              onClick={() => setConfTab('active')}
+            >
+              Active ({activeConf.length})
+            </button>
+            <button
+              className={`ni-conf-tab${confTab === 'today' ? ' ni-conf-tab--active' : ''}`}
+              onClick={() => setConfTab('today')}
+            >
+              All today ({historyConf.length})
+            </button>
           </div>
-        ) : (
-          <div className="ni-conf-list">
-            {confluences.map((c, i) => {
-              const typeCfg = CONFLUENCE_TYPE[c.type] || CONFLUENCE_TYPE.CONFIRMED;
-              const dirCls  = DIR_CLS[c.direction]  || 'dir-neutral';
-              const dirArr  = DIR_ARROW[c.direction] || '→';
+        </div>
 
-              return (
-                <div key={i} className="ni-conf-row">
-                  {/* Left meta */}
-                  <div className="ni-conf-left">
-                    <span className={`ni-type-badge ${typeCfg.cls}`}>{typeCfg.label}</span>
-                    <div className="ni-conf-ticker-row">
-                      <span className="ni-conf-ticker">{c.ticker}</span>
-                      <span className={`ni-conf-dir ${dirCls}`}>{dirArr}</span>
-                    </div>
-                  </div>
+        {confTab === 'active' && !hasActive && !hasHistory && (
+          <div className="ni-no-confluences">
+            No confluences detected yet — analysis runs hourly
+          </div>
+        )}
 
-                  {/* Body — 3 lines */}
-                  <div className="ni-conf-body">
-                    <span className="ni-conf-headline">{c.headline}</span>
-                    {c.insight && (
-                      <span className="ni-conf-insight">{c.insight}</span>
-                    )}
-                    {c.signal_context && (
-                      <span className="ni-conf-context">{c.signal_context}</span>
-                    )}
-                  </div>
+        {showFallback && (
+          <>
+            <div className="ni-conf-fallback-note">
+              No new confluences detected this scan — showing last known signals
+            </div>
+            <ConfluenceList confluences={fallbackConf} muted />
+          </>
+        )}
 
-                  {/* Right meta */}
-                  <div className="ni-conf-right">
-                    <span className="ni-conf-score">{(c.signal_score || 0).toFixed(1)}</span>
-                    {c.confidence && (
-                      <span className="ni-conf-confidence">{c.confidence}</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+        {!showFallback && displayedConf.length > 0 && (
+          <ConfluenceList confluences={displayedConf} />
+        )}
+
+        {confTab === 'today' && !hasHistory && (
+          <div className="ni-no-confluences">
+            No confluences detected in the last 24 hours
           </div>
         )}
       </div>

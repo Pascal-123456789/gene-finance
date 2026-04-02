@@ -186,11 +186,38 @@ async def scheduled_update_loop():
             headlines = collect_top_headlines()
             analysis = await analyze_headlines_with_ai(headlines, signal_data_for_ai)
             if supabase:
+                # Always upsert news_intelligence for macro context, themes, rotation, flags
                 supabase.table('news_intelligence').insert({
                     **analysis,
                     "headline_count": len(headlines),
                     "headlines": headlines,
                 }).execute()
+
+                # Only insert into confluences table when the AI found new ones
+                new_confluences = analysis.get('confluences') or []
+                if new_confluences:
+                    detected_at = datetime.utcnow().isoformat()
+                    expires_at  = (datetime.utcnow() + timedelta(hours=6)).isoformat()
+                    rows = [
+                        {
+                            "ticker":         c.get("ticker", ""),
+                            "type":           c.get("type", "CONFIRMED"),
+                            "signal_score":   c.get("signal_score", 0),
+                            "direction":      c.get("direction", "NEUTRAL"),
+                            "headline":       c.get("headline", ""),
+                            "signal_context": c.get("signal_context", ""),
+                            "insight":        c.get("insight", ""),
+                            "confidence":     c.get("confidence", "LOW"),
+                            "detected_at":    detected_at,
+                            "expires_at":     expires_at,
+                        }
+                        for c in new_confluences
+                    ]
+                    supabase.table('confluences').insert(rows).execute()
+                    print(f"AUTO-UPDATE: Inserted {len(rows)} confluences into dedicated table")
+                else:
+                    print("AUTO-UPDATE: 0 confluences — previous ones preserved in table")
+
             print(f"AUTO-UPDATE: News intelligence saved ({len(headlines)} headlines, "
                   f"{len(analysis.get('confluences', []))} confluences)")
         except Exception as e:
@@ -1194,7 +1221,7 @@ async def get_score_history(ticker: str):
 
 @app.get("/news/intelligence")
 async def get_news_intelligence():
-    """Returns the single most recent news intelligence analysis."""
+    """Returns the most recent news intelligence analysis, with fallback for null fields."""
     if not supabase:
         return {"error": "Database not configured"}
     try:
@@ -1208,7 +1235,32 @@ async def get_news_intelligence():
         rows = response.data or []
         if not rows:
             return {"error": "No news intelligence data yet — run a scan first"}
-        return rows[0]
+        latest = rows[0]
+
+        # If sector_rotation or watchlist_flags are empty/null, fall back to the most
+        # recent row that has non-null values for those fields.
+        needs_fallback = (
+            not latest.get('sector_rotation') or
+            not latest.get('watchlist_flags')
+        )
+        if needs_fallback:
+            fallback_resp = (
+                supabase.table('news_intelligence')
+                .select('sector_rotation,watchlist_flags')
+                .not_.is_('sector_rotation', 'null')
+                .order('recorded_at', desc=True)
+                .limit(5)
+                .execute()
+            )
+            for row in (fallback_resp.data or []):
+                if not latest.get('sector_rotation') and row.get('sector_rotation'):
+                    latest['sector_rotation'] = row['sector_rotation']
+                if not latest.get('watchlist_flags') and row.get('watchlist_flags'):
+                    latest['watchlist_flags'] = row['watchlist_flags']
+                if latest.get('sector_rotation') and latest.get('watchlist_flags'):
+                    break
+
+        return latest
     except Exception as e:
         print(f"news_intelligence read error: {e}")
         return {"error": str(e)}
@@ -1230,6 +1282,45 @@ async def get_news_history():
         return response.data or []
     except Exception as e:
         print(f"news_history read error: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/news/confluences")
+async def get_confluences():
+    """Returns all non-expired confluences, ordered by signal_score descending."""
+    if not supabase:
+        return {"error": "Database not configured"}
+    try:
+        response = (
+            supabase.table('confluences')
+            .select('*')
+            .gte('expires_at', datetime.utcnow().isoformat())
+            .order('signal_score', desc=True)
+            .execute()
+        )
+        return response.data or []
+    except Exception as e:
+        print(f"confluences read error: {e}")
+        return {"error": str(e)}
+
+
+@app.get("/news/confluences/history")
+async def get_confluences_history():
+    """Returns all confluences detected in the last 24 hours, regardless of expiry."""
+    if not supabase:
+        return {"error": "Database not configured"}
+    try:
+        since = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+        response = (
+            supabase.table('confluences')
+            .select('*')
+            .gte('detected_at', since)
+            .order('detected_at', desc=True)
+            .execute()
+        )
+        return response.data or []
+    except Exception as e:
+        print(f"confluences_history read error: {e}")
         return {"error": str(e)}
 
 

@@ -147,6 +147,76 @@
   50%       { opacity: 0.35; }
 }
 
+/* ── Confluence section header (label + tabs side-by-side) ───────────────*/
+.ni-conf-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ni-conf-section-header .ni-section-label {
+  margin-bottom: 0;
+}
+
+.ni-conf-tabs {
+  display: flex;
+  gap: 2px;
+  background: #0d1526;
+  border: 1px solid #1a2740;
+  border-radius: 3px;
+  padding: 2px;
+}
+
+.ni-conf-tab {
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #475569;
+  background: transparent;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.ni-conf-tab:hover {
+  color: #64748b;
+}
+
+.ni-conf-tab--active {
+  background: #1a2740;
+  color: #94a3b8;
+}
+
+/* Fallback note when 0 active confluences but history exists */
+.ni-conf-fallback-note {
+  font-size: 11px;
+  color: #334155;
+  padding: 8px 0 10px;
+  font-style: italic;
+}
+
+/* Scan-group divider */
+.ni-scan-divider {
+  font-size: 10px;
+  color: #1a2740;
+  text-align: center;
+  padding: 6px 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ni-scan-divider::before,
+.ni-scan-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #1a2740;
+}
+
 /* ════════════════════════════════════════════════════════════════════════
    CONFLUENCE ROWS
 ════════════════════════════════════════════════════════════════════════*/
@@ -170,6 +240,10 @@
   margin-left: -8px;
   margin-right: -8px;
   padding-right: 8px;
+}
+
+.ni-conf-row--muted {
+  opacity: 0.5;
 }
 
 /* Left column: badge + ticker + direction */
@@ -282,6 +356,11 @@
   color: #334155;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.ni-conf-detected {
+  font-size: 10px;
+  color: #1a2740;
 }
 
 /* ════════════════════════════════════════════════════════════════════════
