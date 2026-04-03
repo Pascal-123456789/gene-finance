@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
-import { FaFire, FaLock, FaBars, FaStar, FaEnvelope, FaInfoCircle, FaChartLine, FaNewspaper } from 'react-icons/fa';
+import { FiActivity, FiRadio, FiClock, FiBookmark, FiInfo, FiLock, FiMail, FiMenu } from 'react-icons/fi';
 import Scanner from './Scanner';
 import MarketScanner from './MarketScanner';
 import PredictedMovers from './PredictedMovers';
@@ -255,44 +255,66 @@ export default function App() {
         <div className="App">
             {currentView !== 'welcome' && (
                 <div className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+                    {/* Logo area */}
                     <div className="logo-container">
-                        <span className="sidebar-logo">EarlyBell</span>
-                        <button className="toggle-btn" onClick={() => setIsSidebarOpen(false)}>
-                            <FaBars />
+                        <span className="sb-logo-collapsed">EB</span>
+                        <div className="sb-wordmark-wrap">
+                            <span className="sb-wordmark">
+                                <span className="sb-wordmark-early">Early</span><span className="sb-wordmark-bell">Bell</span>
+                            </span>
+                            <span className="sb-tagline">Market Intelligence</span>
+                        </div>
+                        <button className="toggle-btn" onClick={() => setIsSidebarOpen(v => !v)} title="Toggle sidebar">
+                            <FiMenu />
                         </button>
                     </div>
+
+                    {/* Navigation */}
                     <nav className="nav-menu">
-                        <div className={`nav-item ${currentView === 'scanner' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('scanner')}>
-                            <FaFire /> <span>Scanner</span>
+                        {/* Primary nav */}
+                        <div className="nav-group">
+                            <div className={`nav-item ${currentView === 'scanner' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('scanner')}>
+                                <FiActivity /><span>Scanner</span>
+                            </div>
+                            <div className={`nav-item ${currentView === 'news' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('news')}>
+                                <FiRadio /><span>News Radar</span>
+                            </div>
+                            <div className={`nav-item ${currentView === 'history' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('history')}>
+                                <FiClock /><span>Alert History</span>
+                            </div>
+                            <div className={`nav-item ${currentView === 'watchlist' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('watchlist')}>
+                                <FiBookmark /><span>Watchlist</span>
+                            </div>
                         </div>
-                        <div className={`nav-item ${currentView === 'news' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('news')}>
-                            <FaNewspaper /> <span>News Radar</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'history' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('history')}>
-                            <FaChartLine /> <span>Alert History</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'watchlist' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('watchlist')}>
-                            <FaStar /> <span>Watchlist</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'about' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('about')}>
-                            <FaInfoCircle /> <span>How It Works</span>
-                        </div>
-                        <div className={`nav-item ${currentView === 'premium' ? 'active' : ''}`}
-                             onClick={() => setCurrentView('premium')}>
-                            <FaLock /> <span>Premium Access</span>
+
+                        <hr className="nav-group-divider" />
+
+                        {/* Secondary nav */}
+                        <div className="nav-group">
+                            <div className={`nav-item ${currentView === 'about' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('about')}>
+                                <FiInfo /><span>How It Works</span>
+                            </div>
+                            <div className={`nav-item ${currentView === 'premium' ? 'active' : ''}`}
+                                 onClick={() => setCurrentView('premium')}>
+                                <FiLock /><span>Premium Access</span>
+                            </div>
+                            <div className="nav-item"
+                                 onClick={() => window.location.href = 'mailto:dipbedford@gmail.com?subject=EarlyBell%20Feedback'}>
+                                <FiMail /><span>Feedback</span>
+                            </div>
                         </div>
                     </nav>
-                    <div className="sidebar-feedback">
-                        <a href="mailto:dipbedford@gmail.com?subject=EarlyBell%20Feedback">
-                            <FaEnvelope /> <span>Feedback</span>
-                        </a>
+
+                    {/* Status bar */}
+                    <div className="sb-status">
+                        <span className="sb-status-dot" />
+                        <span className="sb-status-label">Online</span>
                     </div>
-                    <div className="hype-indicator"><span className="online-dot" /> <span>Scanner Online</span></div>
                 </div>
             )}
 
@@ -300,10 +322,10 @@ export default function App() {
                 <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)} />
             )}
 
-            <div className={`main-content ${currentView === 'welcome' ? 'full' : isSidebarOpen ? 'shifted' : 'full'}`}>
+            <div className={`main-content ${currentView === 'welcome' ? 'full' : isSidebarOpen ? 'shifted' : 'collapsed'}`}>
                 {currentView !== 'welcome' && !isSidebarOpen && (
                     <button className="toggle-btn-top" onClick={() => setIsSidebarOpen(true)}>
-                        <FaBars />
+                        <FiMenu />
                     </button>
                 )}
                 {renderContent()}
